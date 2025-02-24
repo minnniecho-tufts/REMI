@@ -8,6 +8,7 @@ app = Flask(__name__)
 # Dictionary to store user sessions
 user_sessions = {}
 
+
 def decision_making_agent_llm(user_session):
     """
     Uses an LLM to determine if enough information has been collected.
@@ -77,6 +78,7 @@ def handle_conversation_with_llm(user_input, user_session):
 
     return response.get("response", "⚠️ Sorry, I couldn't process that. Could you rephrase?").strip()
 
+
 @app.route('/query', methods=['POST'])
 def main():
     """Handles user queries and initiates the restaurant recommendation process."""
@@ -97,13 +99,19 @@ def main():
                 "location": None
             }
         }
-        return jsonify({"text": "🍽️ **FEEEELING HUNGRY?** REMI 🧑🏻‍🍳 IS HERE TO HELP YOU!\n\nJust tell me what you're looking for, and REMI will help you **find and book a restaurant!**\n\nWhat type of food are you in the mood for?"})
+
+        # Send the welcome message first
+        welcome_message = "🍽️ **FEEEELING HUNGRY?** REMI 🧑🏻‍🍳 IS HERE TO HELP YOU!\n\nJust tell me what you're looking for, and REMI will help you **find and book a restaurant!**"
+        
+        # Immediately call LLM to start the conversation after the welcome message
+        response_text = handle_conversation_with_llm("start", user_sessions[user])
+
+        return jsonify({"text": f"{welcome_message}\n\n{response_text}"})
 
     session = user_sessions[user]
 
     # Decision-Making Agent checks if all info is gathered
     ready_to_search, missing_info = decision_making_agent_llm(session)
-    print('hi')
 
     if ready_to_search:
         return jsonify({"text": "Awesome! I have everything I need. Let me find the best restaurant for you... 🍽️"})
