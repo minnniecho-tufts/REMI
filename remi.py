@@ -43,6 +43,35 @@ def agent_decision(user_session):
     return "missing: unknown"
 
 
+def extract_preferences(user_input, user_session):
+    """
+    Extracts preferences (cuisine, budget, location) from user input and updates the session.
+    """
+    # Example: Extract cuisine
+    if "cuisine" not in user_session["preferences"] or not user_session["preferences"]["cuisine"]:
+        if "pizza" in user_input:
+            user_session["preferences"]["cuisine"] = "Italian"
+        elif "sushi" in user_input:
+            user_session["preferences"]["cuisine"] = "Japanese"
+        # Add more cuisine mappings as needed
+
+    # Example: Extract budget
+    if "budget" not in user_session["preferences"] or not user_session["preferences"]["budget"]:
+        if "cheap" in user_input or "low" in user_input:
+            user_session["preferences"]["budget"] = "low"
+        elif "expensive" in user_input or "high" in user_input:
+            user_session["preferences"]["budget"] = "high"
+        # Add more budget mappings as needed
+
+    # Example: Extract location
+    if "location" not in user_session["preferences"] or not user_session["preferences"]["location"]:
+        if "downtown" in user_input:
+            user_session["preferences"]["location"] = "downtown"
+        elif "suburb" in user_input:
+            user_session["preferences"]["location"] = "suburb"
+        # Add more location mappings as needed
+
+
 def agent_conversation(user_input, user_session):
     """
     Uses an LLM to infer user details (cuisine, budget, location) and update the session.
@@ -59,6 +88,9 @@ def agent_conversation(user_input, user_session):
     - A structured JSON response with extracted values for cuisine, budget, and location.
     """
 
+    # Update session with preferences extracted from user input
+    extract_preferences(user_input, user_session)
+
     response = generate(
         model="4o-mini",
         system=system,
@@ -72,12 +104,22 @@ def agent_conversation(user_input, user_session):
     response_text = response.get("response", "⚠️ Sorry, I couldn't process that. Could you rephrase?").strip()
 
     # Extract inferred preferences from response (assume JSON format in response)
-    if "cuisine" in response and response["cuisine"]:
-        user_session["preferences"]["cuisine"] = response["cuisine"]
-    if "budget" in response and response["budget"]:
-        user_session["preferences"]["budget"] = response["budget"]
-    if "location" in response and response["location"]:
-        user_session["preferences"]["location"] = response["location"]
+    try:
+        # Parse JSON if present in the response
+        if "{" in response_text and "}" in response_text:
+            import json
+            parsed_response = json.loads(response_text.split("{")[1].split("}")[0])
+            if "cuisine" in parsed_response:
+                user_session["preferences"]["cuisine"] = parsed_response["cuisine"]
+            if "budget" in parsed_response:
+                user_session["preferences"]["budget"] = parsed_response["budget"]
+            if "location" in parsed_response:
+                user_session["preferences"]["location"] = parsed_response["location"]
+    except Exception as e:
+        print(f"Error parsing JSON from LLM response: {e}")
+
+    # Add user input and bot response to conversation history
+    user_session["history"].append({"user": user_input, "bot": response_text})
 
     return response_text
 
@@ -113,7 +155,7 @@ def main():
 
     session = user_sessions[user]
 
-    # Alternate between conversation and decision-making like in the class example
+    # Alternate between conversation and decision-making
     max_iterations = 5  # Prevent infinite loops
     i = 0
 
@@ -123,7 +165,7 @@ def main():
         if decision_result == "ready":
             return jsonify({"text": "Awesome! I have everything I need. Let me find the best restaurant for you... 🍽️"})
 
-        # Otherwise, extract what details are missing and continue the conversation
+        # Otherwise, continue the conversation
         response_text = agent_conversation(message, session)
         
         i += 1  # Ensure loop does not run forever
