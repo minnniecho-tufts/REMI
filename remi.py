@@ -14,25 +14,39 @@ def decision_making_agent_llm(user_session):
     If any key information is missing, the LLM will infer and decide whether to proceed or ask for more details.
     """
     response = generate(
-        model="4o-mini",  
+        model="4o-mini",  # Ensure correct model name
         system="""
-        You are an intelligent restaurant recommendation assistant named REMI 🍽️.
-        Your task is to check if the user has provided enough details (cuisine, budget, location)
-        to search for a restaurant. If any details are missing, identify them and guide the user
-        naturally towards providing the missing details.
-
-        Example:
-        - If the user says "I want sushi," and no budget or location is provided, suggest asking about budget and location.
-        - If all details are present, confirm and proceed to searching for restaurants.
+            You are an intelligent restaurant recommendation assistant named REMI 🍽️.
+            Your task is to check if the user has provided enough details (cuisine, budget, location)
+            to search for a restaurant. If any details are missing, identify them and guide the user
+            naturally towards providing the missing details.
+            
+            Example:
+            - If the user says "I want sushi," and no budget or location is provided, suggest asking about budget and location.
+            - If all details are present, confirm and proceed to searching for restaurants.
+            
+            Respond with:
+            - "ready" if all details are present.
+            - "missing: [list of missing details]" if details are missing.
         """,
         query=f"User session: {user_session}",
-        temperature=0.5,
+        temperature=0.0,  # Set to deterministic behavior
         lastk=0,
         session_id="remi-decision",
         rag_usage=False
     )
 
-    return response.get("response", "⚠️ Sorry, I couldn't process that. Could you rephrase?")
+    # Extract response
+    result = response.get("response", "").strip().lower()
+
+    if result == "ready":
+        return True, None  # All details collected
+    elif result.startswith("missing:"):
+        missing_details = result.replace("missing:", "").strip().split(", ")
+        return False, missing_details  # Still missing information
+
+    return False, ["unknown"]  # Default fallback
+
 
 def handle_conversation_with_llm(user_input, user_session):
     """
@@ -41,30 +55,27 @@ def handle_conversation_with_llm(user_input, user_session):
     """
     response = generate(
         model="4o-mini",   
-        system=f"""
-        You are a friendly restaurant assistant named REMI 🍽️. 
-        Your job is to infer details about the user's restaurant preferences 
-        and guide them naturally.
-        
-        If the user hasn't provided a cuisine, budget, or location, ask about them in a conversational way.
-        If all details are provided, confirm and prepare to start searching for restaurants.
-        
-        Current known details:
-        - Cuisine: {user_session['preferences']['cuisine']}
-        - Budget: {user_session['preferences']['budget']}
-        - Location: {user_session['preferences']['location']}
-
-        If the user is vague, politely clarify what they mean.
+        system="""
+            You are a friendly restaurant assistant named REMI 🍽️. 
+            Your job is to infer details about the user's restaurant preferences 
+            and guide them naturally.
+            
+            If the user hasn't provided a cuisine, budget, or location, ask about them in a conversational way.
+            If all details are provided, confirm and prepare to start searching for restaurants.
+            
+            Example:
+            - If the user says "I want Italian food," acknowledge and ask about their budget.
+            - If the user says "I don’t care about price," confirm their budget as "any".
+            - If all details are provided, respond with "All set! Let’s find a restaurant."
         """,
-        query=f"User input: '{user_input}'",
+        query=f"User input: '{user_input}'\nCurrent known details: {user_session['preferences']}",
         temperature=0.7,
         lastk=0,
         session_id="remi-convo",
         rag_usage=False
     )
 
-    return response.get("response", "⚠️ Sorry, I couldn't process that. Could you rephrase?")
-
+    return response.get("response", "⚠️ Sorry, I couldn't process that. Could you rephrase?").strip()
 
 @app.route('/query', methods=['POST'])
 def main():
