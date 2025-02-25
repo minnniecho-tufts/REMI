@@ -13,6 +13,7 @@ session = {
 }
 
 def conversation_agent_llm(message):
+    print("conversation agent")
     """Handles user conversation to gather details like cuisine, budget, and location."""
     
     response = generate(
@@ -37,6 +38,7 @@ def conversation_agent_llm(message):
 
 
 def control_agent_llm(message):
+    print("control agent")
     """Acts as REMI's control center, deciding whether to continue conversation or trigger restaurant search."""
     
     response = generate(
