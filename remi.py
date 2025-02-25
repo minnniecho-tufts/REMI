@@ -8,93 +8,33 @@ app = Flask(__name__)
 # Dictionary to store user sessions
 user_sessions = {}
 
+def conversation_agent_llm(user, message):
+    """
+    Uses an LLM to interact with the user and collect necessary restaurant preferences.
+    Ensures the conversation is natural and avoids repeating questions.
+    """
+    session = user_sessions[user]
 
-def agent_decision(user_session):
-    """
-    Uses an LLM to determine if enough information has been collected.
-    If any key information is missing, the LLM will infer and decide whether to proceed or ask for more details.
-    """
-    system = """
-    You are an AI agent named REMI 🍽️ that determines if enough details (cuisine, budget, location)
-    have been provided to search for a restaurant.
-    
-    Respond with:
-    - "ready" if all details are present.
-    - "missing: [list of missing details]" if details are missing.
-    """
-
-    response = generate(
-        model="4o-mini",
-        system=system,
-        query=f"User session: {user_session}",
-        temperature=0.0,
-        lastk=0,
-        session_id="remi-decision",
-        rag_usage=False
+    # Format conversation history for context
+    conversation_history = "\n".join(
+        [f"User: {entry['user']}\nREMI: {entry['remi']}" for entry in session["history"]]
     )
 
-    result = response.get("response", "").strip().lower()
-
-    if result == "ready":
-        return "ready"
-    elif result.startswith("missing:"):
-        return result  # Returns "missing: cuisine, budget" etc.
-
-    return "missing: unknown"
-
-
-def extract_preferences(user_input, user_session):
-    """
-    Extracts preferences (cuisine, budget, location) from user input and updates the session.
-    """
-    # Example: Extract cuisine
-    if "cuisine" not in user_session["preferences"] or not user_session["preferences"]["cuisine"]:
-        if "pizza" in user_input:
-            user_session["preferences"]["cuisine"] = "Italian"
-        elif "sushi" in user_input:
-            user_session["preferences"]["cuisine"] = "Japanese"
-        # Add more cuisine mappings as needed
-
-    # Example: Extract budget
-    if "budget" not in user_session["preferences"] or not user_session["preferences"]["budget"]:
-        if "cheap" in user_input or "low" in user_input:
-            user_session["preferences"]["budget"] = "low"
-        elif "expensive" in user_input or "high" in user_input:
-            user_session["preferences"]["budget"] = "high"
-        # Add more budget mappings as needed
-
-    # Example: Extract location
-    if "location" not in user_session["preferences"] or not user_session["preferences"]["location"]:
-        if "downtown" in user_input:
-            user_session["preferences"]["location"] = "downtown"
-        elif "suburb" in user_input:
-            user_session["preferences"]["location"] = "suburb"
-        # Add more location mappings as needed
-
-
-def agent_conversation(user_input, user_session):
-    """
-    Uses an LLM to infer user details (cuisine, budget, location) and update the session.
-    """
-    system = """
-    You are a friendly restaurant assistant named REMI 🍽️.
-    Your job is to infer details about the user's restaurant preferences and guide them naturally.
-    
-    If the user hasn't provided a cuisine, budget, or location, ask about them in a conversational way.
-    If all details are provided, confirm and prepare to start searching for restaurants.
-
-    Respond with:
-    - The next conversational step based on missing details.
-    - A structured JSON response with extracted values for cuisine, budget, and location.
-    """
-
-    # Update session with preferences extracted from user input
-    extract_preferences(user_input, user_session)
-
     response = generate(
         model="4o-mini",
-        system=system,
-        query=f"User input: '{user_input}'\nCurrent known details: {user_session['preferences']}",
+        system="""
+            You are a friendly restaurant assistant named REMI 🍽️.
+            Your job is to gather information from the user about their restaurant preferences.
+
+            - If the user hasn't provided cuisine, budget, or location, ask about them naturally.
+            - Infer details when possible.
+            - Keep the conversation engaging and ask clarifying questions if needed.
+            - You have access to past user messages, so do not repeat questions unnecessarily.
+
+            Here is the conversation history so far:
+            {history}
+        """.format(history=conversation_history),
+        query=f"User input: '{message}'\nCurrent known details: {session['preferences']}",
         temperature=0.7,
         lastk=0,
         session_id="remi-convo",
@@ -103,38 +43,61 @@ def agent_conversation(user_input, user_session):
 
     response_text = response.get("response", "⚠️ Sorry, I couldn't process that. Could you rephrase?").strip()
 
-    # Extract inferred preferences from response (assume JSON format in response)
-    try:
-        # Parse JSON if present in the response
-        if "{" in response_text and "}" in response_text:
-            import json
-            parsed_response = json.loads(response_text.split("{")[1].split("}")[0])
-            if "cuisine" in parsed_response:
-                user_session["preferences"]["cuisine"] = parsed_response["cuisine"]
-            if "budget" in parsed_response:
-                user_session["preferences"]["budget"] = parsed_response["budget"]
-            if "location" in parsed_response:
-                user_session["preferences"]["location"] = parsed_response["location"]
-    except Exception as e:
-        print(f"Error parsing JSON from LLM response: {e}")
-
-    # Add user input and bot response to conversation history
-    user_session["history"].append({"user": user_input, "bot": response_text})
+    # Store user message and bot response in history
+    session["history"].append({"user": message, "remi": response_text})
 
     return response_text
 
+def control_agent_llm(user, message):
+    """
+    Uses an LLM to decide the next step in the conversation.
+    Determines if more details are needed or if REMI is ready to search for restaurants.
+    """
+    session = user_sessions[user]
+
+    response = generate(
+        model="4o-mini",
+        system="""
+            You are a conversational restaurant assistant named REMI 🍽️.
+            Your job is to manage the conversation and determine the next step.
+
+            - If the user hasn't provided cuisine, budget, or location, guide them conversationally.
+            - If all details are collected, confirm and proceed to restaurant search.
+            - Keep the conversation friendly, and infer preferences naturally when possible.
+            - If the user’s message is vague, politely ask for clarification.
+
+            Respond with:
+            - "ready" if all details are present.
+            - "missing: [list of missing details]" if details are missing.
+        """,
+        query=f"User input: '{message}'\nCurrent known details: {session['preferences']}",
+        temperature=0.0,
+        lastk=0,
+        session_id="remi-control",
+        rag_usage=False
+    )
+
+    result = response.get("response", "").strip().lower()
+
+    if result == "ready":
+        return True, None  # All details collected, move to restaurant search
+    elif result.startswith("missing:"):
+        missing_details = result.replace("missing:", "").strip().split(", ")
+        return False, missing_details  # Still missing some information
+
+    return False, ["unknown"]  # Default fallback case
 
 @app.route('/query', methods=['POST'])
 def main():
     """Handles user queries and initiates the restaurant recommendation process."""
     data = request.get_json()
     user = data.get("user_name", "Unknown")
-    message = data.get("text", "").strip().lower()
+    message = data.get("text", "").strip()
 
     print(f"Message from {user}: {message}")
 
-    # If the user session does not exist, initialize it
-    if user not in user_sessions:
+    # If it's a new user or a reset, start fresh
+    if user not in user_sessions or message.lower() in ["restart", "start over"]:
         user_sessions[user] = {
             "state": "conversation",
             "history": [],
@@ -144,35 +107,18 @@ def main():
                 "location": None
             }
         }
+        return jsonify({"text": "🍽️ **FEEEELING HUNGRY?** REMI 🧑🏻‍🍳 IS HERE TO HELP YOU!\n\nJust tell us what you're looking for, and REMI will help you **find and book a restaurant!**\n\nWhat type of food are you in the mood for?"})
 
-        # Send the welcome message first
-        welcome_message = "🍽️ **FEEEELING HUNGRY?** REMI 🧑🏻‍🍳 IS HERE TO HELP YOU!\n\nJust tell me what you're looking for, and REMI will help you **find and book a restaurant!**"
-        
-        # Immediately start conversation after welcome message
-        response_text = agent_conversation("start", user_sessions[user])
+    # Check if we have enough information to proceed
+    ready_to_search, missing_info = control_agent_llm(user, message)
 
-        return jsonify({"text": f"{welcome_message}\n\n{response_text}"})
+    if ready_to_search:
+        return jsonify({"text": "Awesome! I have everything I need. Let me find the best restaurant for you... 🍽️"})
 
-    session = user_sessions[user]
+    # If missing info, continue gathering details using conversation agent
+    response_text = conversation_agent_llm(user, message)
 
-    # Alternate between conversation and decision-making
-    max_iterations = 5  # Prevent infinite loops
-    i = 0
-
-    while i < max_iterations:
-        decision_result = agent_decision(session)
-
-        if decision_result == "ready":
-            return jsonify({"text": "Awesome! I have everything I need. Let me find the best restaurant for you... 🍽️"})
-
-        # Otherwise, continue the conversation
-        response_text = agent_conversation(message, session)
-        
-        i += 1  # Ensure loop does not run forever
-        return jsonify({"text": response_text})  # Respond to user and wait for next input
-
-    return jsonify({"text": "⚠️ Sorry, something went wrong. Try again!"})
-
+    return jsonify({"text": response_text})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001)
