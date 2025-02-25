@@ -40,8 +40,13 @@ def conversation_agent_llm(message):
         session_id="remi-conversation",
         rag_usage=False
     )
+    response_text = response.get("response", "⚠️ Sorry, I couldn't process that. Could you rephrase?").strip()
 
-    return response.get("response", "⚠️ Sorry, I couldn't process that. Could you rephrase?").strip()
+    if response_text.lower() == "done":
+        return control_agent_llm("done")  # Trigger control agent
+
+    return response_text  # Otherwise, return normal conversation response
+
 
 
 def control_agent_llm(message):
@@ -54,8 +59,8 @@ def control_agent_llm(message):
             You are an AI agent managing a restaurant recommendation assistant.
             Your job is to decide the best next step based on the user's input.
 
-            - If the user hasn't provided cuisine, budget, AND location, respond with "continue".
-            - If all required details are collected, respond with "search_restaurant".
+            - If the conversation agent responds with "done", respond with "search_restaurant".
+            - Otherwise, respond with "continue".
         """,
         query=f"User input: '{message}'\nCurrent session: {session['preferences']}",
         temperature=0.0,
@@ -66,11 +71,10 @@ def control_agent_llm(message):
 
     result = response.get("response", "").strip().lower()
 
-    # Ensure all details are filled before transitioning to search
-    if session["preferences"]["cuisine"] and session["preferences"]["budget"] and session["preferences"]["location"]:
-        return "search_restaurant"
+    if result == "search_restaurant":
+        return search_restaurants()
 
-    return result  # Either "continue" or "search_restaurant"
+    return "continue"  # Either "continue" or "search_restaurant"
 
 
 def search_restaurants():
