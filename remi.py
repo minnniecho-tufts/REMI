@@ -25,7 +25,8 @@ def conversation_agent_llm(message):
             - If the user hasn't provided cuisine, budget, or location, ask about them in a casual way.
             - Infer details from context and suggest reasonable options.
             - Always confirm what you have so far.
-            - If all required details (cuisine, budget, location) are collected, respond with "done".
+            - If all required details (cuisine, budget, location) are collected, respond with "done" AND NOTHING ELSE
+            - DO NOT RECCOMEND RESTARAUNTS AT ALL  
         """,
         query=f"User input: '{message}'\nCurrent known details: {session['preferences']}",
         temperature=0.7,
