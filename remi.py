@@ -48,7 +48,7 @@ def control_agent_llm(message):
             You are an AI agent managing a restaurant recommendation assistant.
             Your job is to decide the best next step based on the user's input.
 
-            - If the user hasn't provided cuisine, budget, or location, respond with "continue".
+            - If the user hasn't provided cuisine, budget, AND location, respond with "continue".
             - If all required details are collected, respond with "search_restaurant".
         """,
         query=f"User input: '{message}'\nCurrent session: {session['preferences']}",
