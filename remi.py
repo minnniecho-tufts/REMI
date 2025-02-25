@@ -5,18 +5,19 @@ from llmproxy import generate
 
 app = Flask(__name__)
 
-# Dictionary to store user sessions
-user_sessions = {}
+# Dictionary to store session for a single user
+user_session = {}
 
-def conversation_agent_llm(user, message):
+def conversation_agent_llm(message):
     """Handles user conversation to gather details like cuisine, budget, and location."""
-    session = user_sessions[user]
+    # Using the single user session data
+    session = user_session
 
     response = generate(
         model="4o-mini",
         system="""
             You are a friendly restaurant assistant named REMI 🍽️.
-            Your job is to engage users in a natural conversation to gather their restaurant preferences.
+            Your job is to engage the user in a natural conversation to gather their restaurant preferences.
             
             - If the user hasn't provided cuisine, budget, or location, ask about them in a casual way.
             - Infer details from context and suggest reasonable options.
@@ -32,9 +33,9 @@ def conversation_agent_llm(user, message):
     return response.get("response", "⚠️ Sorry, I couldn't process that. Could you rephrase?").strip()
 
 
-def control_agent_llm(user, message):
+def control_agent_llm(message):
     """Acts as REMI's control center, deciding whether to continue conversation or trigger restaurant search."""
-    session = user_sessions[user]
+    session = user_session
 
     response = generate(
         model="4o-mini",
@@ -63,9 +64,9 @@ def control_agent_llm(user, message):
     return "continue"  # Default: Keep asking
 
 
-def search_restaurants(user):
+def search_restaurants():
     """Mocks a restaurant search based on user preferences."""
-    session = user_sessions[user]
+    session = user_session
     return f"🍽️ Found the best {session['preferences']['cuisine']} restaurant within your {session['preferences']['budget']} budget at {session['preferences']['location']}!"
 
 
@@ -73,14 +74,13 @@ def search_restaurants(user):
 def main():
     """Handles user queries and initiates the restaurant recommendation process."""
     data = request.get_json()
-    user = data.get("user_name", "Unknown")
     message = data.get("text", "").strip()
 
-    print(f"Message from {user}: {message}")
+    print(f"Message: {message}")
 
     # If the user is new or restarting, reset session
-    if user not in user_sessions or message.lower() in ["restart", "start over"]:
-        user_sessions[user] = {
+    if not user_session or message.lower() in ["restart", "start over"]:
+        user_session = {
             "state": "conversation",
             "history": [],
             "preferences": {"cuisine": None, "budget": None, "location": None}
@@ -88,18 +88,19 @@ def main():
         return jsonify({"text": "🍽️ **FEEEELING HUNGRY?** REMI 🧑🏻‍🍳 IS HERE TO HELP YOU!\n\nTell us what you're looking for, and we'll help you **find and book a restaurant!**\n\nWhat type of food are you in the mood for?"})
 
     # Control agent decides next step
-    decision = control_agent_llm(user, message)
+    decision = control_agent_llm(message)
 
     if decision == "search_restaurant":
-        return jsonify({"text": search_restaurants(user)})
+        return jsonify({"text": search_restaurants()})
 
     # Continue gathering user details
-    response_text = conversation_agent_llm(user, message)
+    response_text = conversation_agent_llm(message)
     return jsonify({"text": response_text})
 
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001)
+
 
 # import os
 # import requests
