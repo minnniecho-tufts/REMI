@@ -15,11 +15,6 @@ def conversation_agent_llm(user, message):
     """
     session = user_sessions[user]
 
-    # Format conversation history for context
-    conversation_history = "\n".join(
-        [f"User: {entry['user']}\nREMI: {entry['remi']}" for entry in session["history"]]
-    )
-
     response = generate(
         model="4o-mini",
         system="""
@@ -27,13 +22,10 @@ def conversation_agent_llm(user, message):
             Your job is to gather information from the user about their restaurant preferences.
 
             - If the user hasn't provided cuisine, budget, or location, ask about them naturally.
+            - If the user mentions any preference, update their profile and avoid asking again.
             - Infer details when possible.
             - Keep the conversation engaging and ask clarifying questions if needed.
-            - You have access to past user messages, so do not repeat questions unnecessarily.
-
-            Here is the conversation history so far:
-            {history}
-        """.format(history=conversation_history),
+        """,
         query=f"User input: '{message}'\nCurrent known details: {session['preferences']}",
         temperature=0.7,
         lastk=0,
@@ -43,10 +35,19 @@ def conversation_agent_llm(user, message):
 
     response_text = response.get("response", "⚠️ Sorry, I couldn't process that. Could you rephrase?").strip()
 
-    # Store user message and bot response in history
+    # **Extract new information and update the session**
+    if "cuisine" in response_text.lower():
+        session["preferences"]["cuisine"] = message
+    if "budget" in response_text.lower():
+        session["preferences"]["budget"] = message
+    if "location" in response_text.lower():
+        session["preferences"]["location"] = message
+
+    # Store conversation history
     session["history"].append({"user": message, "remi": response_text})
 
     return response_text
+
 
 def control_agent_llm(user, message):
     """
