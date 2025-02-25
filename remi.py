@@ -5,19 +5,21 @@ from llmproxy import generate
 
 app = Flask(__name__)
 
-# Dictionary to store session for a single user
-user_session = {}
+# Single user session
+session = {
+    "state": "conversation",
+    "history": [],
+    "preferences": {"cuisine": None, "budget": None, "location": None}
+}
 
 def conversation_agent_llm(message):
     """Handles user conversation to gather details like cuisine, budget, and location."""
-    # Using the single user session data
-    session = user_session
-
+    
     response = generate(
         model="4o-mini",
         system="""
             You are a friendly restaurant assistant named REMI 🍽️.
-            Your job is to engage the user in a natural conversation to gather their restaurant preferences.
+            Your job is to engage users in a natural conversation to gather their restaurant preferences.
             
             - If the user hasn't provided cuisine, budget, or location, ask about them in a casual way.
             - Infer details from context and suggest reasonable options.
@@ -35,8 +37,7 @@ def conversation_agent_llm(message):
 
 def control_agent_llm(message):
     """Acts as REMI's control center, deciding whether to continue conversation or trigger restaurant search."""
-    session = user_session
-
+    
     response = generate(
         model="4o-mini",
         system="""
@@ -45,7 +46,6 @@ def control_agent_llm(message):
 
             - If the user hasn't provided cuisine, budget, or location, respond with "continue".
             - If all required details are collected, respond with "search_restaurant".
-            - If unsure, ask for clarification conversationally.
         """,
         query=f"User input: '{message}'\nCurrent session: {session['preferences']}",
         temperature=0.0,
@@ -55,18 +55,11 @@ def control_agent_llm(message):
     )
 
     result = response.get("response", "").strip().lower()
-
-    if result == "search_restaurant":
-        return "search_restaurant"
-    elif result == "continue":
-        return "continue"
-
-    return "continue"  # Default: Keep asking
+    return result
 
 
 def search_restaurants():
     """Mocks a restaurant search based on user preferences."""
-    session = user_session
     return f"🍽️ Found the best {session['preferences']['cuisine']} restaurant within your {session['preferences']['budget']} budget at {session['preferences']['location']}!"
 
 
@@ -76,15 +69,15 @@ def main():
     data = request.get_json()
     message = data.get("text", "").strip()
 
-    print(f"Message: {message}")
+    print(f"Message received: {message}")
 
-    # If the user is new or restarting, reset session
-    if not user_session or message.lower() in ["restart", "start over"]:
-        user_session = {
+    # If user restarts, reset session
+    if message.lower() in ["restart", "start over"]:
+        session.update({
             "state": "conversation",
             "history": [],
             "preferences": {"cuisine": None, "budget": None, "location": None}
-        }
+        })
         return jsonify({"text": "🍽️ **FEEEELING HUNGRY?** REMI 🧑🏻‍🍳 IS HERE TO HELP YOU!\n\nTell us what you're looking for, and we'll help you **find and book a restaurant!**\n\nWhat type of food are you in the mood for?"})
 
     # Control agent decides next step
@@ -100,7 +93,6 @@ def main():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001)
-
 
 # import os
 # import requests
