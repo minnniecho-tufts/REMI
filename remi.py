@@ -100,11 +100,63 @@ def conversation_agent_llm(message):
 
 #     return response_text  # Otherwise, continue conversation
 
+# def control_agent_llm(message):
+#     print("control agent")
+#     print(message)
+#     """Acts as REMI's control center, deciding whether to continue conversation or trigger restaurant search."""
+    
+#     response = generate(
+#         model="4o-mini",
+#         system="""
+#             You are an AI agent managing a restaurant recommendation assistant.
+#             Your job is to decide the best next step based on the user's input.
+
+#             - If the conversation agent responds with "done", respond with "search_restaurant".
+#             - Otherwise, respond with "continue".
+#         """,
+#         query=f"User input: '{message}'\nCurrent session: {session['preferences']}",
+#         temperature=0.0,
+#         lastk=10,
+#         session_id="remi-control",
+#         rag_usage=False
+#     )
+
+#     result = response.get("response", "").strip().lower()
+
+#     print(f"🟡 Preferences Before Search: {session['preferences']}")
+
+#     if result == "search_restaurant":
+#         print('hello')
+
+#         return search_restaurants()
+
+#     return "continue"  # Either "continue" or "search_restaurant"
+
 def control_agent_llm(message):
     print("control agent")
-    print(message)
-    """Acts as REMI's control center, deciding whether to continue conversation or trigger restaurant search."""
-    
+    print(f"🟡 Received from Conversation Agent: {message}")
+
+    # If message contains preferences, extract them
+    if message.lower().startswith("done |"):
+        try:
+            # Parse response format "done | cuisine: Sushi | budget: 2 | location: Boston"
+            parts = message.split(" | ")
+            extracted_preferences = {part.split(": ")[0]: part.split(": ")[1] for part in parts[1:]}
+
+            # Store extracted values in session
+            session["preferences"]["cuisine"] = extracted_preferences.get("cuisine")
+            session["preferences"]["budget"] = extracted_preferences.get("budget")
+            session["preferences"]["location"] = extracted_preferences.get("location")
+
+            print(f"🟢 Preferences Successfully Passed to Search: {session['preferences']}")
+
+            return search_restaurants()  # Now, call search_restaurants with updated preferences
+
+        except Exception as e:
+            print(f"🚨 ERROR: Failed to parse 'done' response format. Error: {e}")
+            return "⚠️ There was an issue processing your request."
+
+    # Otherwise, use LLM to decide next step
     response = generate(
         model="4o-mini",
         system="""
@@ -126,10 +178,11 @@ def control_agent_llm(message):
     print(f"🟡 Preferences Before Search: {session['preferences']}")
 
     if result == "search_restaurant":
-        print('hello')
+        print('✅ Triggering restaurant search...')
         return search_restaurants()
 
-    return "continue"  # Either "continue" or "search_restaurant"
+    return "continue"
+
 
 def search_restaurants():
     """Searches for a restaurant based on user preferences using Yelp API."""
