@@ -32,11 +32,7 @@ def conversation_agent_llm(message):
             - Infer details from context and suggest reasonable options.
             - Always confirm what you have so far.
             - for the budget store it as a number 1-4 according to this scale - "cheap": "1", "mid-range": "2", "expensive": "3", "fine dining": "4"
-            - If all required details (cuisine, budget, location) are collected, respond with "done" AND NOTHING ELSE
-            - DO NOT RECOMMEND RESTAURANTS AT ALL  
-            - If all required details (cuisine, budget, location) are collected, respond with exactly:
-              "done | {cuisine} | {budget} | {location}" 
-            - Ensure that the response format is strict to allow parsing.
+            - If all required details (cuisine, budget, location) are collected, respond with "done" and reccomend the user ONE restaraunt and end the session
         """,
         query=f"User input: '{message}'\nCurrent known details: {session['preferences']}",
         temperature=0.7,
