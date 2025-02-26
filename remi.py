@@ -162,8 +162,15 @@ def control_agent_llm(message):
         system="""
             You are an AI agent managing a restaurant recommendation assistant.
             Your job is to decide the best next step based on the user's input.
+             You are an AI agent designed to handle user requests.
+            In addition to your own intelligence, you are given access to a set of tools.
 
-            - If the conversation agent responds with "done", respond with "search_restaurant".
+            Think step-by-step, breaking down the task into a sequence small steps.
+
+            If you can't resolve the query based on your intelligence, ask the user to execute a tool on your behalf and share the results with you.
+            If you want the user to execute a tool on your behalf, strictly only respond with the tool's name and parameters.
+
+            - If the conversation agent responds with "done", respond with a restaurant reccomendation within the area and end the session.
             - Otherwise, respond with "continue".
         """,
         query=f"User input: '{message}'\nCurrent session: {session['preferences']}",
