@@ -31,6 +31,7 @@ def conversation_agent_llm(message):
             - If the user hasn't provided cuisine, budget, or location, ask about them in a casual way.
             - Infer details from context and suggest reasonable options.
             - Always confirm what you have so far.
+            - for the budget store it as a number 1-4 according to this scale - "cheap": "1", "mid-range": "2", "expensive": "3", "fine dining": "4"
             - If all required details (cuisine, budget, location) are collected, respond with "done" AND NOTHING ELSE
             - DO NOT RECOMMEND RESTAURANTS AT ALL  
         """,
@@ -42,9 +43,9 @@ def conversation_agent_llm(message):
     )
     response_text = response.get("response", "⚠️ Sorry, I couldn't process that. Could you rephrase?").strip()
 
-    if response_text.lower() == "done":
-        print("hello")
-        return control_agent_llm("done")  # Trigger control agent
+    # if response_text.lower() == "done":
+    #     print("hello")
+    #     return control_agent_llm("done")  # Trigger control agent
 
     return response_text  # Otherwise, return normal conversation response
 
@@ -72,6 +73,7 @@ def control_agent_llm(message):
     result = response.get("response", "").strip().lower()
 
     if result == "search_restaurant":
+        print('hello')
         return search_restaurants()
 
     return "continue"  # Either "continue" or "search_restaurant"
@@ -84,10 +86,6 @@ def search_restaurants():
     budget = session["preferences"]["budget"]
     location = session["preferences"]["location"]
     
-    # Convert budget to Yelp API format (1=cheap, 4=expensive)
-    price_map = {"cheap": "1", "mid-range": "2", "expensive": "3", "fine dining": "4"}
-    price = price_map.get(budget.lower(), "2")  # Default to mid-range if unrecognized
-    
     headers = {
         "Authorization": f"Bearer {API_KEY}",
         "accept": "application/json"
@@ -95,7 +93,7 @@ def search_restaurants():
     params = {
         "term": cuisine,
         "location": location,
-        "price": price,  # Yelp API uses 1 (cheap) to 4 (expensive)
+        "price": budget,  # Yelp API uses 1 (cheap) to 4 (expensive)
         "limit": 1,  # Only fetch one restaurant
         "sort_by": "best_match"
     }
