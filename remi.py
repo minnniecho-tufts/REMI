@@ -81,38 +81,50 @@ def control_agent_llm(message):
 
 def search_restaurants():
     """Searches for a restaurant based on user preferences using Yelp API."""
+    print('hello1')
     
     cuisine = session["preferences"]["cuisine"]
     budget = session["preferences"]["budget"]
     location = session["preferences"]["location"]
-    
+    print(f"🟡 Preferences Before API Call: Cuisine={cuisine}, Budget={budget}, Location={location}")
+    print('hello2')
+
     headers = {
         "Authorization": f"Bearer {API_KEY}",
         "accept": "application/json"
     }
+
+    print('hello3')
     params = {
         "term": cuisine,
         "location": location,
-        "price": budget,  # Yelp API uses 1 (cheap) to 4 (expensive)
-        "limit": 1,  # Only fetch one restaurant
+        "price": budget, 
+        "limit": 1,  
         "sort_by": "best_match"
     }
-    
+    print(f"🔵 Sending API Request to Yelp with Params: {params}")
+
     response = requests.get(YELP_API_URL, headers=headers, params=params)
+    print(f"🟠 Yelp API Response Status: {response.status_code}")
 
     if response.status_code == 200:
         data = response.json()
-        if "businesses" in data and data["businesses"]:
+        print(f"🟣 Raw API Response: {data}")
+
+        if "businesses" in data and len(data["businesses"]) > 0:
             restaurant = data["businesses"][0]
             name = restaurant["name"]
             address = ", ".join(restaurant["location"]["display_address"])
             rating = restaurant["rating"]
+
+            print(f"✅ Found Restaurant: {name}, {rating}⭐, {address}")
             return f"🍽️ Found **{name}** ({rating}⭐) in {address} for {cuisine} cuisine within your {budget} budget!"
         else:
+            print("⚠️ No restaurants found in Yelp API response.")
             return "⚠️ Sorry, I couldn't find a matching restaurant. Try adjusting your preferences!"
     else:
+        print(f"🚨 Yelp API Error: {response.status_code} - {response.text}")
         return f"⚠️ Yelp API request failed. Error {response.status_code}: {response.text}"
-
 
 @app.route('/query', methods=['POST'])
 def main():
