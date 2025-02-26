@@ -18,6 +18,7 @@ session = {
 }
 
 def restaurant_assistant_llm(message):
+    print('hey')
     """Handles the full conversation and recommends a restaurant."""
     
     response = generate(
@@ -28,8 +29,7 @@ def restaurant_assistant_llm(message):
             - Ask the user for their **cuisine preference, budget, and location**.
             - Store the **budget as a number (1-4)** according to this scale:
               "cheap": "1", "mid-range": "2", "expensive": "3", "fine dining": "4"
-            - Once all details are collected, respond with **'search_restaurant'** and NOTHING ELSE.
-            -  recommend a restaurant! 
+            - Once all details are collected, recommend a restaurant! 
             - put a lot of emojis 
             - make good conversations and be nice 
             - ask for the occasion too 
