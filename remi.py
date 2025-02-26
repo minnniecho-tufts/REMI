@@ -75,15 +75,14 @@ def conversation_agent_llm(message):
 
     response_text = response.get("response", "⚠️ Sorry, I couldn't process that. Could you rephrase?").strip()
 
-    # Check if REMI outputs "done" and update the session
+    # 🛑 If REMI outputs "done", extract and store the preferences
     if response_text.lower().startswith("done |"):
         print(f"✅ Extracted completion message: {response_text}")
 
-        # Extract the preferences from the response
         try:
             _, cuisine, budget, location = response_text.split(" | ")
 
-            # Update session with extracted values
+            # Store extracted values in session
             session["preferences"]["cuisine"] = cuisine
             session["preferences"]["budget"] = budget
             session["preferences"]["location"] = location
@@ -93,15 +92,23 @@ def conversation_agent_llm(message):
         except ValueError:
             print("🚨 ERROR: Failed to parse 'done' response format. Ignoring update.")
 
-        return "done"  # Return "done" so control agent can decide what to do next
+        return "done"  # Return "done" to trigger search in control agent
 
-    return response_text  # Otherwise, continue the conversation
-
+    return response_text  # Otherwise, continue conversation
 
 def control_agent_llm(message):
     print("control agent")
-    """Acts as REMI's control center, deciding whether to continue conversation or trigger restaurant search."""
     
+    # 🟢 Ensure all required fields exist before proceeding
+    if (
+        session["preferences"]["cuisine"]
+        and session["preferences"]["budget"]
+        and session["preferences"]["location"]
+    ):
+        print(f"✅ All preferences available, triggering search: {session['preferences']}")
+        return search_restaurants()
+
+    # Otherwise, query the LLM to decide next step
     response = generate(
         model="4o-mini",
         system="""
@@ -119,39 +126,75 @@ def control_agent_llm(message):
     )
 
     result = response.get("response", "").strip().lower()
-
+    
     print(f"🟡 Preferences Before Search: {session['preferences']}")
 
     if result == "search_restaurant":
-        print('hello')
+        print('✅ Triggering restaurant search...')
         return search_restaurants()
 
-    return "continue"  # Either "continue" or "search_restaurant"
+    return "continue"
 
+# def control_agent_llm(message):
+#     print("control agent")
+#     """Acts as REMI's control center, deciding whether to continue conversation or trigger restaurant search."""
+    
+#     response = generate(
+#         model="4o-mini",
+#         system="""
+#             You are an AI agent managing a restaurant recommendation assistant.
+#             Your job is to decide the best next step based on the user's input.
+
+#             - If the conversation agent responds with "done", respond with "search_restaurant".
+#             - Otherwise, respond with "continue".
+#         """,
+#         query=f"User input: '{message}'\nCurrent session: {session['preferences']}",
+#         temperature=0.0,
+#         lastk=10,
+#         session_id="remi-control",
+#         rag_usage=False
+#     )
+
+#     result = response.get("response", "").strip().lower()
+
+#     print(f"🟡 Preferences Before Search: {session['preferences']}")
+
+#     if result == "search_restaurant":
+#         print('hello')
+#         return search_restaurants()
+
+#     return "continue"  # Either "continue" or "search_restaurant"
 
 def search_restaurants():
     """Searches for a restaurant based on user preferences using Yelp API."""
-    print('hello1')
-    
-    cuisine = session["preferences"]["cuisine"]
-    budget = session["preferences"]["budget"]
-    location = session["preferences"]["location"]
-    print(f"🟡 Preferences Before API Call: Cuisine={cuisine}, Budget={budget}, Location={location}")
-    print('hello2')
+    print('✅ Entering search_restaurants()')
+
+    # Extract values safely
+    cuisine = session["preferences"].get("cuisine", "").strip()
+    budget = session["preferences"].get("budget", "").strip()
+    location = session["preferences"].get("location", "").strip()
+
+    # 🛑 Debugging: Print session data
+    print(f"🟢 Preferences Passed to Yelp API: Cuisine={cuisine}, Budget={budget}, Location={location}")
+
+    # 🔴 If preferences are missing, print error message
+    if not cuisine or not budget or not location:
+        print("🚨 ERROR: Missing required fields in session before calling Yelp API.")
+        return "⚠️ Missing details! Please make sure you've provided cuisine, budget, and location."
 
     headers = {
         "Authorization": f"Bearer {API_KEY}",
         "accept": "application/json"
     }
 
-    print('hello3')
     params = {
         "term": cuisine,
         "location": location,
-        "price": budget, 
+        "price": budget,  # Yelp API uses 1 (cheap) to 4 (expensive)
         "limit": 1,  
         "sort_by": "best_match"
     }
+
     print(f"🔵 Sending API Request to Yelp with Params: {params}")
 
     response = requests.get(YELP_API_URL, headers=headers, params=params)
@@ -161,20 +204,21 @@ def search_restaurants():
         data = response.json()
         print(f"🟣 Raw API Response: {data}")
 
-        if "businesses" in data and len(data["businesses"]) > 0:
+        if "businesses" in data and data["businesses"]:
             restaurant = data["businesses"][0]
             name = restaurant["name"]
             address = ", ".join(restaurant["location"]["display_address"])
             rating = restaurant["rating"]
 
             print(f"✅ Found Restaurant: {name}, {rating}⭐, {address}")
-            return f"🍽️ Found **{name}** ({rating}⭐) in {address} for {cuisine} cuisine within your {budget} budget!"
+            return f"🍽️ Found **{name}** ({rating}⭐) in {address} for {cuisine} cuisine within your budget!"
         else:
             print("⚠️ No restaurants found in Yelp API response.")
             return "⚠️ Sorry, I couldn't find a matching restaurant. Try adjusting your preferences!"
     else:
         print(f"🚨 Yelp API Error: {response.status_code} - {response.text}")
         return f"⚠️ Yelp API request failed. Error {response.status_code}: {response.text}"
+
 
 @app.route('/query', methods=['POST'])
 def main():
