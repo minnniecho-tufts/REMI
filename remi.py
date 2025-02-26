@@ -176,13 +176,13 @@ def control_agent_llm(message):
         rag_usage=False
     )
 
-    result = response.get("response", "").strip().lower()
+    #result = response.get("response", "").strip().lower()
 
     print(f"🟡 Preferences Before Search: {session['preferences']}")
 
-    if result == "search_restaurant":
-        print('✅ Triggering restaurant search...')
-        return search_restaurants()
+    # if result == "search_restaurant":
+    #     print('✅ Triggering restaurant search...')
+    #     return search_restaurants()
 
     return "continue"
 
