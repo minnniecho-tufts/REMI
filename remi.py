@@ -29,7 +29,10 @@ def restaurant_assistant_llm(message):
             - Store the **budget as a number (1-4)** according to this scale:
               "cheap": "1", "mid-range": "2", "expensive": "3", "fine dining": "4"
             - Once all details are collected, respond with **'search_restaurant'** and NOTHING ELSE.
-            - DO NOT recommend a restaurant yourself—only trigger the search function.
+            -  recommend a restaurant! 
+            - put a lot of emojis 
+            - make good conversations and be nice 
+            - ask for the occasion too 
         """,
         query=f"User input: '{message}'\nCurrent preferences: {session['preferences']}",
         temperature=0.7,
@@ -40,48 +43,11 @@ def restaurant_assistant_llm(message):
     
     response_text = response.get("response", "⚠️ Sorry, I couldn't process that. Could you rephrase?").strip()
     
-    if response_text.lower() == "search_restaurant":
-        return search_restaurants()
+    # if response_text.lower() == "search_restaurant":
+    #     return search_restaurants()
     
     return response_text
 
-def search_restaurants():
-    """Fetches a restaurant recommendation from Yelp based on user preferences."""
-    
-    cuisine = session["preferences"].get("cuisine", "").strip()
-    budget = session["preferences"].get("budget", "").strip()
-    location = session["preferences"].get("location", "").strip()
-    
-    if not cuisine or not budget or not location:
-        return "⚠️ Missing details! Please provide cuisine, budget, and location."
-    
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "accept": "application/json"
-    }
-    params = {
-        "term": cuisine,
-        "location": location,
-        "price": budget,  # Yelp API uses 1 (cheap) to 4 (fine dining)
-        "limit": 1,
-        "sort_by": "best_match"
-    }
-    
-    response = requests.get(YELP_API_URL, headers=headers, params=params)
-    
-    if response.status_code == 200:
-        data = response.json()
-        
-        if "businesses" in data and data["businesses"]:
-            restaurant = data["businesses"][0]
-            name = restaurant["name"]
-            address = ", ".join(restaurant["location"]["display_address"])
-            rating = restaurant["rating"]
-            return f"🍽️ Found **{name}** ({rating}⭐) at {address} for {cuisine} cuisine!"
-        else:
-            return "⚠️ No matching restaurants found. Try adjusting your preferences!"
-    else:
-        return f"⚠️ Yelp API request failed. Error {response.status_code}: {response.text}"
 
 @app.route('/query', methods=['POST'])
 def main():
