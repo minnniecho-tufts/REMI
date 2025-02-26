@@ -71,6 +71,8 @@ def control_agent_llm(message):
     )
 
     result = response.get("response", "").strip().lower()
+    
+    print(f"🟡 Preferences Before Search: {session['preferences']}")
 
     if result == "search_restaurant":
         print('hello')
