@@ -193,57 +193,57 @@ def control_agent_llm(message):
 
 def search_restaurants():
     """Searches for a restaurant based on user preferences using Yelp API."""
-    print('✅ Entering search_restaurants()')
+    return print('✅ Entering search_restaurants()')
 
-    # Extract values safely
-    cuisine = session["preferences"].get("cuisine", "").strip()
-    budget = session["preferences"].get("budget", "").strip()
-    location = session["preferences"].get("location", "").strip()
+    # # Extract values safely
+    # cuisine = session["preferences"].get("cuisine", "").strip()
+    # budget = session["preferences"].get("budget", "").strip()
+    # location = session["preferences"].get("location", "").strip()
 
-    # 🛑 Debugging: Print session data
-    print(f"🟢 Preferences Passed to Yelp API: Cuisine={cuisine}, Budget={budget}, Location={location}")
+    # # 🛑 Debugging: Print session data
+    # print(f"🟢 Preferences Passed to Yelp API: Cuisine={cuisine}, Budget={budget}, Location={location}")
 
-    # 🔴 If preferences are missing, print error message
-    if not cuisine or not budget or not location:
-        print("🚨 ERROR: Missing required fields in session before calling Yelp API.")
-        return "⚠️ Missing details! Please make sure you've provided cuisine, budget, and location."
+    # # 🔴 If preferences are missing, print error message
+    # if not cuisine or not budget or not location:
+    #     print("🚨 ERROR: Missing required fields in session before calling Yelp API.")
+    #     return "⚠️ Missing details! Please make sure you've provided cuisine, budget, and location."
 
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "accept": "application/json"
-    }
+    # headers = {
+    #     "Authorization": f"Bearer {API_KEY}",
+    #     "accept": "application/json"
+    # }
 
-    params = {
-        "term": cuisine,
-        "location": location,
-        "price": budget,  # Yelp API uses 1 (cheap) to 4 (expensive)
-        "limit": 1,  
-        "sort_by": "best_match"
-    }
+    # params = {
+    #     "term": cuisine,
+    #     "location": location,
+    #     "price": budget,  # Yelp API uses 1 (cheap) to 4 (expensive)
+    #     "limit": 1,  
+    #     "sort_by": "best_match"
+    # }
 
-    print(f"🔵 Sending API Request to Yelp with Params: {params}")
+    # print(f"🔵 Sending API Request to Yelp with Params: {params}")
 
-    response = requests.get(YELP_API_URL, headers=headers, params=params)
-    print(f"🟠 Yelp API Response Status: {response.status_code}")
+    # response = requests.get(YELP_API_URL, headers=headers, params=params)
+    # print(f"🟠 Yelp API Response Status: {response.status_code}")
 
-    if response.status_code == 200:
-        data = response.json()
-        print(f"🟣 Raw API Response: {data}")
+    # if response.status_code == 200:
+    #     data = response.json()
+    #     print(f"🟣 Raw API Response: {data}")
 
-        if "businesses" in data and data["businesses"]:
-            restaurant = data["businesses"][0]
-            name = restaurant["name"]
-            address = ", ".join(restaurant["location"]["display_address"])
-            rating = restaurant["rating"]
+    #     if "businesses" in data and data["businesses"]:
+    #         restaurant = data["businesses"][0]
+    #         name = restaurant["name"]
+    #         address = ", ".join(restaurant["location"]["display_address"])
+    #         rating = restaurant["rating"]
 
-            print(f"✅ Found Restaurant: {name}, {rating}⭐, {address}")
-            return f"🍽️ Found **{name}** ({rating}⭐) in {address} for {cuisine} cuisine within your budget!"
-        else:
-            print("⚠️ No restaurants found in Yelp API response.")
-            return "⚠️ Sorry, I couldn't find a matching restaurant. Try adjusting your preferences!"
-    else:
-        print(f"🚨 Yelp API Error: {response.status_code} - {response.text}")
-        return f"⚠️ Yelp API request failed. Error {response.status_code}: {response.text}"
+    #         print(f"✅ Found Restaurant: {name}, {rating}⭐, {address}")
+    #         return f"🍽️ Found **{name}** ({rating}⭐) in {address} for {cuisine} cuisine within your budget!"
+    #     else:
+    #         print("⚠️ No restaurants found in Yelp API response.")
+    #         return "⚠️ Sorry, I couldn't find a matching restaurant. Try adjusting your preferences!"
+    # else:
+    #     print(f"🚨 Yelp API Error: {response.status_code} - {response.text}")
+    #     return f"⚠️ Yelp API request failed. Error {response.status_code}: {response.text}"
 
 
 @app.route('/query', methods=['POST'])
