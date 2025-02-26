@@ -18,22 +18,53 @@ session = {
     "preferences": {"cuisine": None, "budget": None, "location": None, "occasion": None}
 }
 
+# def conversation_agent_llm(message):
+#     print("conversation agent")
+#     """Handles user conversation to gather details like cuisine, budget, and location."""
+    
+#     response = generate(
+#         model="4o-mini",
+#         system="""
+#             You are a friendly restaurant assistant named REMI 🍽️.
+#             Your job is to engage users in a natural conversation to gather their restaurant preferences.
+            
+#             - If the user hasn't provided cuisine, budget, or location, ask about them in a casual way.
+#             - Infer details from context and suggest reasonable options.
+#             - Always confirm what you have so far.
+#             - for the budget store it as a number 1-4 according to this scale - "cheap": "1", "mid-range": "2", "expensive": "3", "fine dining": "4"
+#             - If all required details (cuisine, budget, location) are collected, respond with "done" AND NOTHING ELSE
+#             - DO NOT RECOMMEND RESTAURANTS AT ALL  
+#         """,
+#         query=f"User input: '{message}'\nCurrent known details: {session['preferences']}",
+#         temperature=0.7,
+#         lastk=10,
+#         session_id="remi-conversation",
+#         rag_usage=False
+#     )
+#     response_text = response.get("response", "⚠️ Sorry, I couldn't process that. Could you rephrase?").strip()
+
+#     # if response_text.lower() == "done":
+#     #     print("hello")
+#     #     return control_agent_llm("done")  # Trigger control agent
+
+#     return response_text  # Otherwise, return normal conversation response
 def conversation_agent_llm(message):
     print("conversation agent")
-    """Handles user conversation to gather details like cuisine, budget, and location."""
     
     response = generate(
         model="4o-mini",
         system="""
             You are a friendly restaurant assistant named REMI 🍽️.
             Your job is to engage users in a natural conversation to gather their restaurant preferences.
-            
+
             - If the user hasn't provided cuisine, budget, or location, ask about them in a casual way.
             - Infer details from context and suggest reasonable options.
             - Always confirm what you have so far.
-            - for the budget store it as a number 1-4 according to this scale - "cheap": "1", "mid-range": "2", "expensive": "3", "fine dining": "4"
-            - If all required details (cuisine, budget, location) are collected, respond with "done" AND NOTHING ELSE
-            - DO NOT RECOMMEND RESTAURANTS AT ALL  
+            - Store the budget as a number 1-4 according to this scale: 
+              "cheap": "1", "mid-range": "2", "expensive": "3", "fine dining": "4"
+            - If all required details (cuisine, budget, location) are collected, respond with exactly:
+              "done | {cuisine} | {budget} | {location}" 
+              - Ensure that the response format is strict to allow parsing.
         """,
         query=f"User input: '{message}'\nCurrent known details: {session['preferences']}",
         temperature=0.7,
@@ -41,13 +72,30 @@ def conversation_agent_llm(message):
         session_id="remi-conversation",
         rag_usage=False
     )
+
     response_text = response.get("response", "⚠️ Sorry, I couldn't process that. Could you rephrase?").strip()
 
-    # if response_text.lower() == "done":
-    #     print("hello")
-    #     return control_agent_llm("done")  # Trigger control agent
+    # Check if REMI outputs "done" and update the session
+    if response_text.lower().startswith("done |"):
+        print(f"✅ Extracted completion message: {response_text}")
 
-    return response_text  # Otherwise, return normal conversation response
+        # Extract the preferences from the response
+        try:
+            _, cuisine, budget, location = response_text.split(" | ")
+
+            # Update session with extracted values
+            session["preferences"]["cuisine"] = cuisine
+            session["preferences"]["budget"] = budget
+            session["preferences"]["location"] = location
+
+            print(f"🟢 Preferences Updated in Session: {session['preferences']}")
+
+        except ValueError:
+            print("🚨 ERROR: Failed to parse 'done' response format. Ignoring update.")
+
+        return "done"  # Return "done" so control agent can decide what to do next
+
+    return response_text  # Otherwise, continue the conversation
 
 
 def control_agent_llm(message):
@@ -71,7 +119,7 @@ def control_agent_llm(message):
     )
 
     result = response.get("response", "").strip().lower()
-    
+
     print(f"🟡 Preferences Before Search: {session['preferences']}")
 
     if result == "search_restaurant":
