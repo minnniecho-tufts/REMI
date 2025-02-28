@@ -39,12 +39,13 @@ def restaurant_assistant_llm(message, sid, user_session):
               - If the user provides cuisine: "Cuisine noted: [cuisine]"
               - If the user provides budget: "Budget noted: [budget (1-4)]"
               - If the user provides location: "Location noted: [location]"
-              - Once all details are collected, respond ONLY with 'Thank you! Now searching...' 
+              - ONLY WHEN cuisine, budget, and location have been noted, respond ONLY with 'Thank you! Now searching...' 
 
         """,
+
         query=f"User input: '{message}'\nCurrent known details: {user_session['preferences']}",
         temperature=0.7,
-        lastk=5,
+        lastk=50,
         session_id=sid,
         rag_usage=False
     )
@@ -55,28 +56,34 @@ def restaurant_assistant_llm(message, sid, user_session):
     # Extract information from LLM response
     if "Cuisine noted:" in response_text:
         print('in cuisine')
-        match = re.search(r"Cuisine noted[:\s]*(.*)", response_text)
+        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)
+        match = re.search(r"Cuisine noted[:\s]*(.*)", ascii_text)
         if match:
             user_session["preferences"]["cuisine"] = match.group(1)
-            print(user_session["preferences"]["cuisine"])
+            print("user_session[preferences][cuisine]):", user_session["preferences"]["cuisine"])
 
         # user_session["preferences"]["cuisine"] = response_text.split("Cuisine noted:")[-1].strip()
     if "Budget noted:" in response_text:
-        match = re.search(r"Budget noted[:\s]*(.*)", response_text)
+        print('in budget')
+        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)
+        match = re.search(r"Budget noted[:\s]*(.*)", ascii_text)
         if match:
             user_session["preferences"]["budget"] = match.group(1)
-            print(user_session["preferences"]["budget"])
+            print("user_session[preferences][budget]):", user_session["preferences"]["budget"])
 
         # user_session["preferences"]["budget"] = response_text.split("Budget noted:")[-1].strip()
     if "Location noted:" in response_text:
-        match = re.search(r"Location noted[:\s]*(.*)", response_text)
+        print('in location')
+        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)
+        match = re.search(r"Location noted[:\s]*(.*)", ascii_text)
         if match:
             user_session["preferences"]["location"] = match.group(1)
-            print(user_session["preferences"]["location"])
+            print("user_session[preferences][location]):", user_session["preferences"]["location"])
         # user_session["preferences"]["location"] = response_text.split("Location noted:")[-1].strip()
     
     if "now searching" in response_text.lower():
-        return search_restaurants(user_session)
+        # later, we'll pass these results to another LLM to keep asking the user if they like this choice
+        search_restaurants(user_session)
 
     return response_text
 
@@ -145,6 +152,8 @@ def main():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001)
+
+
 
 #########################################################################################################
 # import os
