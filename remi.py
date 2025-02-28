@@ -13,11 +13,11 @@ API_KEY = os.getenv("YELP_API_KEY")
 YELP_API_URL = "https://api.yelp.com/v3/businesses/search"
 session_dict = {}
 
-# Single user session
-session = {
-    "state": "conversation",
-    "preferences": {"cuisine": None, "budget": None, "location": None}
-}
+# # Single user session
+# session = {
+#     "state": "conversation",
+#     "preferences": {"cuisine": None, "budget": None, "location": None}
+# }
 
 def restaurant_assistant_llm(message, sid):
     """Handles the full conversation and recommends a restaurant."""
@@ -38,7 +38,8 @@ def restaurant_assistant_llm(message, sid):
             - Store the **budget as a number (1-4)** according to this scale:  
               "cheap": "1", "mid-range": "2", "expensive": "3", "fine dining": "4"
             - Ask the user for the **occasion** to make it more engaging.
-            - Once all details are collected, respond with **'search_restaurant'** (and nothing else).
+            - Once all details are collected, respond ONLY with 'Thank you! Now searching...' 
+
         """,
         query=f"User input: '{message}'\nCurrent preferences: {session['preferences']}",
         temperature=0.7,
@@ -49,13 +50,14 @@ def restaurant_assistant_llm(message, sid):
     
     response_text = response.get("response", "⚠️ Sorry, I couldn't process that. Could you rephrase?").strip()
     
-    if response_text.lower() == "search_restaurant":
+    if "now searching" in response_text.lower():
         return search_restaurants()
 
     return response_text
 
 
 def search_restaurants():
+    print('HI')
     """Uses Yelp API to find a restaurant based on user preferences."""
     
     cuisine = session["preferences"]["cuisine"]
@@ -100,6 +102,7 @@ def main():
     data = request.get_json()
     message = data.get("text", "").strip()
     user = data.get("user_name", "Unknown")
+    print("current user", user)
 
     if user not in session_dict:
         session_dict[user] = "{user}-session"
