@@ -44,7 +44,7 @@ def restaurant_assistant_llm(message, sid, user_session):
         """,
         query=f"User input: '{message}'\nCurrent known details: {user_session['preferences']}",
         temperature=0.7,
-        lastk=10,
+        lastk=5,
         session_id=sid,
         rag_usage=False
     )
