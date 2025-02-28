@@ -55,21 +55,21 @@ def restaurant_assistant_llm(message, sid, user_session):
     # Extract information from LLM response
     if "Cuisine noted:" in response_text:
         print('in cuisine')
-        match = re.search(r"Cuisine noted[:\s]*(.*)", response.text)
+        match = re.search(r"Cuisine noted[:\s]*(.*)", response_text)
         if match:
             user_session["preferences"]["cuisine"] = match.group(1)
             print(user_session["preferences"]["cuisine"])
 
         # user_session["preferences"]["cuisine"] = response_text.split("Cuisine noted:")[-1].strip()
     if "Budget noted:" in response_text:
-        match = re.search(r"Budget noted[:\s]*(.*)", response.text)
+        match = re.search(r"Budget noted[:\s]*(.*)", response_text)
         if match:
             user_session["preferences"]["budget"] = match.group(1)
             print(user_session["preferences"]["budget"])
 
         # user_session["preferences"]["budget"] = response_text.split("Budget noted:")[-1].strip()
     if "Location noted:" in response_text:
-        match = re.search(r"Location noted[:\s]*(.*)", response.text)
+        match = re.search(r"Location noted[:\s]*(.*)", response_text)
         if match:
             user_session["preferences"]["location"] = match.group(1)
             print(user_session["preferences"]["location"])
