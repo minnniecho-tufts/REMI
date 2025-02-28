@@ -41,7 +41,7 @@ def restaurant_assistant_llm(message, sid):
             - Once all details are collected, respond ONLY with 'Thank you! Now searching...' 
 
         """,
-        query=f"User input: '{message}'\nCurrent preferences: {session['preferences']}",
+        query=message,
         temperature=0.7,
         lastk=10,
         session_id=sid,
@@ -57,43 +57,43 @@ def restaurant_assistant_llm(message, sid):
 
 
 def search_restaurants():
-    print('HI')
-    """Uses Yelp API to find a restaurant based on user preferences."""
+    print('In search restaurants functino')
+    # """Uses Yelp API to find a restaurant based on user preferences."""
     
-    cuisine = session["preferences"]["cuisine"]
-    budget = session["preferences"]["budget"]
-    location = session["preferences"]["location"]
+    # cuisine = session["preferences"]["cuisine"]
+    # budget = session["preferences"]["budget"]
+    # location = session["preferences"]["location"]
 
-    if not cuisine or not budget or not location:
-        return "⚠️ I need a cuisine, budget, and location before searching for restaurants!"
+    # if not cuisine or not budget or not location:
+    #     return "⚠️ I need a cuisine, budget, and location before searching for restaurants!"
 
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "accept": "application/json"
-    }
+    # headers = {
+    #     "Authorization": f"Bearer {API_KEY}",
+    #     "accept": "application/json"
+    # }
     
-    params = {
-        "term": cuisine,
-        "location": location,
-        "price": budget,  # Yelp API uses 1 (cheap) to 4 (expensive)
-        "limit": 1,  # Fetch only one restaurant
-        "sort_by": "best_match"
-    }
+    # params = {
+    #     "term": cuisine,
+    #     "location": location,
+    #     "price": budget,  # Yelp API uses 1 (cheap) to 4 (expensive)
+    #     "limit": 1,  # Fetch only one restaurant
+    #     "sort_by": "best_match"
+    # }
 
-    response = requests.get(YELP_API_URL, headers=headers, params=params)
+    # response = requests.get(YELP_API_URL, headers=headers, params=params)
 
-    if response.status_code == 200:
-        data = response.json()
-        if "businesses" in data and data["businesses"]:
-            restaurant = data["businesses"][0]
-            name = restaurant["name"]
-            address = ", ".join(restaurant["location"]["display_address"])
-            rating = restaurant["rating"]
-            return f"🍽️ Found **{name}** ({rating}⭐) in {address} for {cuisine} cuisine within your budget!"
-        else:
-            return "⚠️ Sorry, I couldn't find any matching restaurants. Try adjusting your preferences!"
+    # if response.status_code == 200:
+    #     data = response.json()
+    #     if "businesses" in data and data["businesses"]:
+    #         restaurant = data["businesses"][0]
+    #         name = restaurant["name"]
+    #         address = ", ".join(restaurant["location"]["display_address"])
+    #         rating = restaurant["rating"]
+    #         return f"🍽️ Found **{name}** ({rating}⭐) in {address} for {cuisine} cuisine within your budget!"
+    #     else:
+    #         return "⚠️ Sorry, I couldn't find any matching restaurants. Try adjusting your preferences!"
     
-    return f"⚠️ Yelp API request failed. Error {response.status_code}: {response.text}"
+    # return f"⚠️ Yelp API request failed. Error {response.status_code}: {response.text}"
 
 
 @app.route('/query', methods=['POST'])
@@ -107,6 +107,7 @@ def main():
     if user not in session_dict:
         session_dict[user] = "{user}-session"
     sid = session_dict[user]
+    print("session id is", sid)
 
     return jsonify({"text": restaurant_assistant_llm(message, sid)})
 
