@@ -29,18 +29,17 @@ def restaurant_assistant_llm(message, sid, user_session):
               What type of food are you in the mood for?  
             
             - FIRST: Ask the user for their **cuisine preference** in a natural way.
-               - If the user provides cuisine: "Cuisine noted: [cuisine]"
+               - If the user provides cuisine: 
             - SECOND: Ask the user for their **budget** in a natural way.
                - Store the **budget as a number (1-4)** according to this scale:  
               "cheap": "1", "mid-range": "2", "expensive": "3", "fine dining": "4"
-               - If the user provides budget: "Budget noted: [budget (1-4)]"
+               - If the user provides budget: ""
             - THIRD:  Ask the user for their **location** in a natural way.
-               - If the user provides location: "Location noted: [location]"
             - Put a lot of **emojis** and be **fun and quirky**.
             - Ask the user for the **occasion** to make it more engaging.
             - At the end, ONLY WHEN cuisine, budget, and location have all been collected
-            from the user, respond ONLY with 'Thank you! Now searching...' 
-
+            from the user, respond in a list format:
+                "Cuisine noted: [cuisine]\nLocation noted: [location]\nBudget noted: [budget (1-4)]"
         """,
 
         query=message,
