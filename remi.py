@@ -1,3 +1,4 @@
+
 import os
 import requests
 from flask import Flask, request, jsonify
@@ -10,6 +11,7 @@ app = Flask(__name__)
 load_dotenv()
 API_KEY = os.getenv("YELP_API_KEY")   
 YELP_API_URL = "https://api.yelp.com/v3/businesses/search"
+session_dict = {}
 
 # Single user session
 session = {
@@ -17,37 +19,79 @@ session = {
     "preferences": {"cuisine": None, "budget": None, "location": None}
 }
 
-def restaurant_assistant_llm(message):
-    print('hey')
+def restaurant_assistant_llm(message, sid):
     """Handles the full conversation and recommends a restaurant."""
     
     response = generate(
         model="4o-mini",
         system="""
             You are a friendly restaurant assistant named REMI 🍽️. Your job is to help the user find a place to eat.
-            - put the welcome message (first message) FEEEELING HUNGRY?** REMI 🧑🏻‍🍳 IS HERE TO HELP YOU!\n\nTell us what you're looking for, and we'll help you **find and book a restaurant!**\n\nWhat type of food are you in the mood for?
-            - Ask the user for their **cuisine preference, budget, and location**.
-            - put a lot of emojis and be nice and quirky 
-             - DO NOT list what details you already have.
-            - Store the **budget as a number (1-4)** according to this scale:
-              "cheap": "1", "mid-range": "2", "expensive": "3", "fine dining": "4" 
-            - make it a fun asual conversation and ask for the occasion 
-            - Once all details are collected, recommend a restaurant!
             
+            - The first message should be:  
+              **FEEEELING HUNGRY?** REMI 🧑🏻‍🍳 IS HERE TO HELP YOU!  
+              Tell us what you're looking for, and we'll help you **find and book a restaurant!**  
+              What type of food are you in the mood for?  
+            
+            - Ask the user for their **cuisine preference, budget, and location** in a natural way.
+            - Put a lot of **emojis** and be **fun and quirky**.
+            - DO NOT list what details you already have.
+            - Store the **budget as a number (1-4)** according to this scale:  
+              "cheap": "1", "mid-range": "2", "expensive": "3", "fine dining": "4"
+            - Ask the user for the **occasion** to make it more engaging.
+            - Once all details are collected, respond with **'search_restaurant'** (and nothing else).
         """,
         query=f"User input: '{message}'\nCurrent preferences: {session['preferences']}",
         temperature=0.7,
         lastk=10,
-        session_id="restaurant-assistant",
+        session_id=sid,
         rag_usage=False
     )
     
     response_text = response.get("response", "⚠️ Sorry, I couldn't process that. Could you rephrase?").strip()
     
-    # if response_text.lower() == "search_restaurant":
-    #     return search_restaurants()
-    
+    if response_text.lower() == "search_restaurant":
+        return search_restaurants()
+
     return response_text
+
+
+def search_restaurants():
+    """Uses Yelp API to find a restaurant based on user preferences."""
+    
+    cuisine = session["preferences"]["cuisine"]
+    budget = session["preferences"]["budget"]
+    location = session["preferences"]["location"]
+
+    if not cuisine or not budget or not location:
+        return "⚠️ I need a cuisine, budget, and location before searching for restaurants!"
+
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "accept": "application/json"
+    }
+    
+    params = {
+        "term": cuisine,
+        "location": location,
+        "price": budget,  # Yelp API uses 1 (cheap) to 4 (expensive)
+        "limit": 1,  # Fetch only one restaurant
+        "sort_by": "best_match"
+    }
+
+    response = requests.get(YELP_API_URL, headers=headers, params=params)
+
+    if response.status_code == 200:
+        data = response.json()
+        if "businesses" in data and data["businesses"]:
+            restaurant = data["businesses"][0]
+            name = restaurant["name"]
+            address = ", ".join(restaurant["location"]["display_address"])
+            rating = restaurant["rating"]
+            return f"🍽️ Found **{name}** ({rating}⭐) in {address} for {cuisine} cuisine within your budget!"
+        else:
+            return "⚠️ Sorry, I couldn't find any matching restaurants. Try adjusting your preferences!"
+    
+    return f"⚠️ Yelp API request failed. Error {response.status_code}: {response.text}"
 
 
 @app.route('/query', methods=['POST'])
@@ -55,13 +99,88 @@ def main():
     """Handles user messages and decides what to do."""
     data = request.get_json()
     message = data.get("text", "").strip()
-    
-    return jsonify({"text": restaurant_assistant_llm(message)})
+    user = data.get("user_name", "Unknown")
+
+    if user not in session_dict:
+        session_dict[user] = "{user}-session"
+    sid = session_dict[user]
+
+    return jsonify({"text": restaurant_assistant_llm(message, sid)})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001)
 
+#########################################################################################################
+# import os
+# import requests
+# from flask import Flask, request, jsonify
+# from llmproxy import generate
+# from dotenv import load_dotenv  
 
+# app = Flask(__name__)
+
+# # Load API Key from .env file
+# load_dotenv()
+# API_KEY = os.getenv("YELP_API_KEY")   
+# YELP_API_URL = "https://api.yelp.com/v3/businesses/search"
+
+# # Single user session
+# session = {
+#     "state": "conversation",
+#     "preferences": {"cuisine": None, "budget": None, "location": None}
+# }
+
+# def restaurant_assistant_llm(message, sid):
+#     print('hey')
+#     """Handles the full conversation and recommends a restaurant."""
+    
+#     response = generate(
+#         model="4o-mini",
+#         system="""
+#             You are a friendly restaurant assistant named REMI 🍽️. Your job is to help the user find a place to eat.
+#             - put the welcome message (first message) FEEEELING HUNGRY?** REMI 🧑🏻‍🍳 IS HERE TO HELP YOU!\n\nTell us what you're looking for, and we'll help you **find and book a restaurant!**\n\nWhat type of food are you in the mood for?
+#             - Ask the user for their **cuisine preference, budget, and location**.
+#             - put a lot of emojis and be nice and quirky 
+#              - DO NOT list what details you already have.
+#             - Store the **budget as a number (1-4)** according to this scale:
+#               "cheap": "1", "mid-range": "2", "expensive": "3", "fine dining": "4" 
+#             - make it a fun casual conversation and ask for the occasion 
+#             - Once all details are collected, recommend a restaurant!
+#             - 
+            
+#         """,
+#         query=f"User input: '{message}'\nCurrent preferences: {session['preferences']}",
+#         temperature=0.7,
+#         lastk=10,
+#         session_id=sid,
+#         rag_usage=False
+#     )
+    
+#     response_text = response.get("response", "⚠️ Sorry, I couldn't process that. Could you rephrase?").strip()
+    
+#     # if response_text.lower() == "search_restaurant":
+#     #     return search_restaurants()
+    
+#     return response_text
+
+
+# @app.route('/query', methods=['POST'])
+# def main():
+#     """Handles user messages and decides what to do."""
+#     data = request.get_json()
+#     message = data.get("text", "").strip()
+#     user = data.get("user_name", "Unknown")
+
+#     if user not in session_dict:
+#         session_dict[user] = "{user}-session"
+#     sid = session_dict[user]
+    
+#     return jsonify({"text": restaurant_assistant_llm(message, sid)})
+
+# if __name__ == "__main__":
+#     app.run(host="0.0.0.0", port=5001)
+
+#########################################################################################################
 # import os
 # import requests
 # from flask import Flask, request, jsonify
