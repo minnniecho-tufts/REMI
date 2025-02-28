@@ -15,7 +15,7 @@ session_dict = {}
 
 
 
-def restaurant_assistant_llm(message, sid):
+def restaurant_assistant_llm(message, sid, user_session):
     """Handles the full conversation and recommends a restaurant."""
     
     response = generate(
@@ -34,10 +34,14 @@ def restaurant_assistant_llm(message, sid):
             - Store the **budget as a number (1-4)** according to this scale:  
               "cheap": "1", "mid-range": "2", "expensive": "3", "fine dining": "4"
             - Ask the user for the **occasion** to make it more engaging.
-            - Once all details are collected, respond ONLY with 'Thank you! Now searching...' 
+            - Respond with structured messages:
+              - If the user provides cuisine: "Cuisine noted: [cuisine]"
+              - If the user provides budget: "Budget noted: [budget (1-4)]"
+              - If the user provides location: "Location noted: [location]"
+              - Once all details are collected, respond ONLY with 'Thank you! Now searching...' 
 
         """,
-        query=message,
+        query=f"User input: '{message}'\nCurrent known details: {user_session['preferences']}",
         temperature=0.7,
         lastk=10,
         session_id=sid,
@@ -45,20 +49,31 @@ def restaurant_assistant_llm(message, sid):
     )
     
     response_text = response.get("response", "⚠️ Sorry, I couldn't process that. Could you rephrase?").strip()
+
+
+    # Extract information from LLM response
+    if "Cuisine noted:" in response_text:
+        user_session["preferences"]["cuisine"] = response_text.split("Cuisine noted:")[1].strip()
+    if "Budget noted:" in response_text:
+        user_session["preferences"]["budget"] = response_text.split("Budget noted:")[1].strip()
+    if "Location noted:" in response_text:
+        user_session["preferences"]["location"] = response_text.split("Location noted:")[1].strip()
     
     if "now searching" in response_text.lower():
-        return search_restaurants()
+        return search_restaurants(user_session)
 
     return response_text
 
 
-def search_restaurants():
+def search_restaurants(user_session):
     print('In search restaurants function')
     # """Uses Yelp API to find a restaurant based on user preferences."""
     
-    # cuisine = session["preferences"]["cuisine"]
-    # budget = session["preferences"]["budget"]
-    # location = session["preferences"]["location"]
+    cuisine = user_session["preferences"]["cuisine"]
+    budget = user_session["preferences"]["budget"]
+    location = user_session["preferences"]["location"]
+
+    print("cuisine: ", cuisine, "budget: ", budget, "location: ", location)
 
     # if not cuisine or not budget or not location:
     #     return "⚠️ I need a cuisine, budget, and location before searching for restaurants!"
@@ -110,9 +125,10 @@ def main():
         session_dict[user] = (f"{user}-session", session)
         
     sid = session_dict[user][0]
+    user_session = session_dict[user][1]
     print("session id is", sid)
 
-    return jsonify({"text": restaurant_assistant_llm(message, sid)})
+    return jsonify({"text": restaurant_assistant_llm(message, sid, user_session)})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001)
