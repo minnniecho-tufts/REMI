@@ -13,11 +13,7 @@ API_KEY = os.getenv("YELP_API_KEY")
 YELP_API_URL = "https://api.yelp.com/v3/businesses/search"
 session_dict = {}
 
-# # Single user session
-# session = {
-#     "state": "conversation",
-#     "preferences": {"cuisine": None, "budget": None, "location": None}
-# }
+
 
 def restaurant_assistant_llm(message, sid):
     """Handles the full conversation and recommends a restaurant."""
@@ -57,7 +53,7 @@ def restaurant_assistant_llm(message, sid):
 
 
 def search_restaurants():
-    print('In search restaurants functino')
+    print('In search restaurants function')
     # """Uses Yelp API to find a restaurant based on user preferences."""
     
     # cuisine = session["preferences"]["cuisine"]
@@ -105,8 +101,15 @@ def main():
     print("current user", user)
 
     if user not in session_dict:
-        session_dict[user] = "{user}-session"
-    sid = session_dict[user]
+        # Single user session
+        session = {
+            "state": "conversation",
+            "preferences": {"cuisine": None, "budget": None, "location": None}
+        }
+        
+        session_dict[user] = (f"{user}-session", session)
+        
+    sid = session_dict[user][0]
     print("session id is", sid)
 
     return jsonify({"text": restaurant_assistant_llm(message, sid)})
