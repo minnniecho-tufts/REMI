@@ -15,7 +15,6 @@ YELP_API_URL = "https://api.yelp.com/v3/businesses/search"
 session_dict = {}
 
 
-
 def restaurant_assistant_llm(message, sid, user_session):
     """Handles the full conversation and recommends a restaurant."""
     
@@ -50,7 +49,7 @@ def restaurant_assistant_llm(message, sid, user_session):
         session_id=sid,
         rag_usage=False
     )
-    
+    print("BEFORE")
     print("current details collected: ", user_session['preferences'])
     response_text = response.get("response", "⚠️ Sorry, I couldn't process that. Could you rephrase?").strip()
 
@@ -64,7 +63,6 @@ def restaurant_assistant_llm(message, sid, user_session):
             user_session["preferences"]["cuisine"] = match.group(1)
             print("user_session[preferences][cuisine]):", user_session["preferences"]["cuisine"])
 
-        # user_session["preferences"]["cuisine"] = response_text.split("Cuisine noted:")[-1].strip()
     if "Budget noted:" in response_text:
         print('in budget')
         ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)
@@ -73,7 +71,6 @@ def restaurant_assistant_llm(message, sid, user_session):
             user_session["preferences"]["budget"] = match.group(1)
             print("user_session[preferences][budget]):", user_session["preferences"]["budget"])
 
-        # user_session["preferences"]["budget"] = response_text.split("Budget noted:")[-1].strip()
     if "Location noted:" in response_text:
         print('in location')
         ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)
@@ -81,11 +78,13 @@ def restaurant_assistant_llm(message, sid, user_session):
         if match:
             user_session["preferences"]["location"] = match.group(1)
             print("user_session[preferences][location]):", user_session["preferences"]["location"])
-        # user_session["preferences"]["location"] = response_text.split("Location noted:")[-1].strip()
     
     if "now searching" in response_text.lower():
         # later, we'll pass these results to another LLM to keep asking the user if they like this choice
         search_restaurants(user_session)
+
+    print("AFTER updated:")
+    print("current details collected: ", user_session['preferences'])
 
     return response_text
 
@@ -135,9 +134,12 @@ def main():
     data = request.get_json()
     message = data.get("text", "").strip()
     user = data.get("user_name", "Unknown")
+    
+    print("current session dict", session_dict)
     print("current user", user)
 
     if user not in session_dict:
+        print("new user, ", user)
         # Single user session
         session = {
             "state": "conversation",
