@@ -4,6 +4,7 @@ import requests
 from flask import Flask, request, jsonify
 from llmproxy import generate
 from dotenv import load_dotenv  
+import re
 
 app = Flask(__name__)
 
@@ -53,11 +54,26 @@ def restaurant_assistant_llm(message, sid, user_session):
 
     # Extract information from LLM response
     if "Cuisine noted:" in response_text:
-        user_session["preferences"]["cuisine"] = response_text.split("Cuisine noted:")[1].strip()
+        print('in cuisine')
+        match = re.search(r"Cuisine noted[:\s]*(.*)", response.text)
+        if match:
+            user_session["preferences"]["cuisine"] = match.group(1)
+            print(user_session["preferences"]["cuisine"])
+
+        # user_session["preferences"]["cuisine"] = response_text.split("Cuisine noted:")[-1].strip()
     if "Budget noted:" in response_text:
-        user_session["preferences"]["budget"] = response_text.split("Budget noted:")[1].strip()
+        match = re.search(r"Budget noted[:\s]*(.*)", response.text)
+        if match:
+            user_session["preferences"]["budget"] = match.group(1)
+            print(user_session["preferences"]["budget"])
+
+        # user_session["preferences"]["budget"] = response_text.split("Budget noted:")[-1].strip()
     if "Location noted:" in response_text:
-        user_session["preferences"]["location"] = response_text.split("Location noted:")[1].strip()
+        match = re.search(r"Location noted[:\s]*(.*)", response.text)
+        if match:
+            user_session["preferences"]["location"] = match.group(1)
+            print(user_session["preferences"]["location"])
+        # user_session["preferences"]["location"] = response_text.split("Location noted:")[-1].strip()
     
     if "now searching" in response_text.lower():
         return search_restaurants(user_session)
@@ -74,9 +90,6 @@ def search_restaurants(user_session):
     location = user_session["preferences"]["location"]
 
     print("cuisine: ", cuisine, "budget: ", budget, "location: ", location)
-
-    # if not cuisine or not budget or not location:
-    #     return "⚠️ I need a cuisine, budget, and location before searching for restaurants!"
 
     # headers = {
     #     "Authorization": f"Bearer {API_KEY}",
