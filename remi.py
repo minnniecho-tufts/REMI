@@ -32,7 +32,7 @@ def restaurant_assistant_llm(message, sid):
                - Store the **budget as a number (1-4)** according to this scale:  
               "cheap": "1", "mid-range": "2", "expensive": "3", "fine dining": "4"
             - THIRD:  Ask the user for their **location** in a natural way (acceptable inputs include city, state, and zip code).
-            - FOURTH: Ask the user what their preferred search radius is. The search radius cannot be greater than 25 miles.
+            - FOURTH: Ask the user what their preferred search radius is. The search radius cannot be greater than 20 miles.
             - Put a lot of **emojis** and be **fun and quirky**.
             - Ask the user for the **occasion** to make it more engaging.
             - At the end, after the user has provided all four parameters of cuisine, budget, location, AND search radius, 
@@ -172,7 +172,7 @@ def search_restaurants(user_session, index=0):
 
     response = requests.get(YELP_API_URL, headers=headers, params=params)
 
-    res = [f"Great! Here are some budget-friendly suggestions we found for {cuisine} cuisine within a {int(radius*0.000621)}-mile radius of {location}!\n"]
+    res = [f"Here are some budget-friendly suggestions we found for {cuisine} cuisine within a {int(float(radius) * 0.000621371)}-mile radius of {location}!\n"]
     if response.status_code == 200:
         data = response.json()
         if "businesses" in data and data["businesses"]:
