@@ -126,20 +126,20 @@ def restaurant_assistant_llm(message, sid):
             }
         ]
     
-    # if message == "yes_clicked":
-    #     response_obj["text"] = "Great! To select a restaurant, type 'Top choice: ' followed by its number from the list. For example, if you want the first choice in the list, type 'Top choice: 1'."
-    # elif message == "no_clicked":
-    #     our_pick = search_restaurants(user_session, -1)
-    #     response_obj["text"] = f"Great! Let's go with {our_pick}."
-    #     agent_contact(our_pick, sid)  # send the agent our restaurant choice
-    # elif "top choice" in message.lower():
-    #     ascii_text = re.sub(r"[^\x00-\x7F]+", "", message.lower())  # Remove non-ASCII characters
-    #     match = re.search(r"top choice[:*\s]*(\d+)", ascii_text)  # Extract only the number
-    #     if match:
-    #         index = int(match.group(1))
-    #         their_pick = search_restaurants(user_session, index)
-    #         response_obj["text"] = f"Great choice! You've selected {their_pick}."
-    #         agent_contact(their_pick, sid)  # send the agent their restaurant choice
+    if message == "yes_clicked":
+        response_obj["text"] = "Great! To select a restaurant, type 'Top choice: ' followed by its number from the list. For example, if you want the first choice in the list, type 'Top choice: 1'."
+    elif message == "no_clicked":
+        our_pick = search_restaurants(user_session, -1)
+        response_obj["text"] = f"Great! Let's go with {our_pick}."
+        agent_contact(our_pick, sid)  # send the agent our restaurant choice
+    elif "top choice" in message.lower():
+        ascii_text = re.sub(r"[^\x00-\x7F]+", "", message.lower())  # Remove non-ASCII characters
+        match = re.search(r"top choice[:*\s]*(\d+)", ascii_text)  # Extract only the number
+        if match:
+            index = int(match.group(1))
+            their_pick = search_restaurants(user_session, index)
+            response_obj["text"] = f"Great choice! You've selected {their_pick}."
+            agent_contact(their_pick, sid)  # send the agent their restaurant choice
 
 
     print("AFTER updated:")
@@ -173,10 +173,13 @@ def search_restaurants(user_session, index=0):
 
     response = requests.get(YELP_API_URL, headers=headers, params=params)
 
+
     res = [f"Here are some budget-friendly suggestions we found for {cuisine} cuisine within a {round(float(radius) * 0.000621371)}-mile radius of {location}!\n"]
     if response.status_code == 200:
+    
         data = response.json()
         if "businesses" in data and data["businesses"]:
+
             for i in range(len(data["businesses"])):
                 restaurant = data["businesses"][i]
                 name = restaurant["name"]
@@ -289,7 +292,6 @@ def main():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001)
-
 
 
 
