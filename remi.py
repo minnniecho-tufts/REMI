@@ -36,7 +36,7 @@ def restaurant_assistant_llm(message, sid):
             - FOURTH: Ask the user what their preferred search radius is. The search radius cannot be greater than 25 miles. Convert their answers to meters.
             - Put a lot of **emojis** and be **fun and quirky**.
             - Ask the user for the **occasion** to make it more engaging.
-            - At the end, ONLY WHEN the user has provided all four parameters of cuisine, budget, location, AND search radius, 
+            - At the end, after the user has provided all four parameters of cuisine, budget, location, AND search radius, 
             respond in a list format:
                 "Cuisine noted: [cuisine]\nLocation noted: [location]\nBudget noted: [budget (1-4)]\nSearch radius noted: [radius (in meters)]"
             and then say, "Thank you! Now searching..."
@@ -44,7 +44,7 @@ def restaurant_assistant_llm(message, sid):
 
         query=message,
         temperature=0.7,
-        lastk=50,
+        lastk=5,
         session_id=sid,
         rag_usage=False
     )
