@@ -21,7 +21,7 @@ def restaurant_assistant_llm(message, sid):
         model="4o-mini",
         system="""
             You are a friendly restaurant assistant named REMI 🍽️. Your job is to help the user find a place to eat.
-            
+
             - The first message should be:  
               **FEEEELING HUNGRY?** REMI 🧑🏻‍🍳 IS HERE TO HELP YOU!  
               Tell us what you're looking for, and we'll help you **find and book a restaurant!**  
@@ -47,105 +47,48 @@ def restaurant_assistant_llm(message, sid):
         session_id=sid,
         rag_usage=False
     )
+    
     response_text = response.get("response", "⚠️ Sorry, I couldn't process that. Could you rephrase?").strip()
 
-    # Initialize an object for user preferences
     user_session = {
-            "state": "conversation",
-            "preferences": {"cuisine": None, "budget": None, "location": None, "radius": None}
+        "state": "conversation",
+        "preferences": {"cuisine": None, "budget": None, "location": None, "radius": None}
     }
-    
-    # Extract information from LLM response
+
+    match = None  # Ensure `match` is always defined
+
     if "Cuisine noted:" in response_text:
-        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
-        match = re.search(r"Cuisine noted[:*\s]*(\S.*)", ascii_text)  # Capture actual text after "*Cuisine noted:*"
+        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)
+        match = re.search(r"Cuisine noted[:*\s]*(\S.*)", ascii_text)
         if match:
-            user_session["preferences"]["cuisine"] = match.group(1).strip()  # Remove extra spaces
+            user_session["preferences"]["cuisine"] = match.group(1).strip()
 
     if "Budget noted:" in response_text:
-        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
-        match = re.search(r"Budget noted[:*\s]*(\d+)", ascii_text)  # Extract only the number
+        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)
+        match = re.search(r"Budget noted[:*\s]*(\d+)", ascii_text)
         if match:
-            user_session["preferences"]["budget"] = match.group(1)  # Store as string (convert if needed)
+            user_session["preferences"]["budget"] = match.group(1)
         else:
-            user_session["preferences"]["budget"] = None  # Handle cases where no number is found
+            user_session["preferences"]["budget"] = None
     
     if "Location noted:" in response_text:
-        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
-        match = re.search(r"Location noted[:*\s]*(\S.*)", ascii_text)  # Capture actual text after "*Location noted:*"
+        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)
+        match = re.search(r"Location noted[:*\s]*(\S.*)", ascii_text)
         if match:
-            user_session["preferences"]["location"] = match.group(1).strip()  # Remove extra spaces
+            user_session["preferences"]["location"] = match.group(1).strip()
     
     if "Search radius noted:" in response_text:
-        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
-        match = re.search(r"Search radius noted[:*\s]*(\d+)", ascii_text)  # Extract only the number
-    if match:
-        miles = int(match.group(1))  # Convert input to an integer
-        metric_radius = min(int(miles * 1609.34), 40000)  # Convert miles to meters, cap at 40000
-        user_session["preferences"]["radius"] = str(metric_radius)  # Store as string (convert if needed)
-    else:
-        user_session["preferences"]["radius"] = None  # Handle cases where no number is found
+        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)
+        match = re.search(r"Search radius noted[:*\s]*(\d+)", ascii_text)
+        if match:
+            miles = int(match.group(1))
+            metric_radius = min(int(miles * 1609.34), 40000)
+            user_session["preferences"]["radius"] = str(metric_radius)
+        else:
+            user_session["preferences"]["radius"] = None
 
-    # Create the response object with the basic text
-    response_obj = {
-        "text": response_text
-    }
+    return {"text": response_text}
 
-    # Handle different scenarios and update the response text or add attachments as needed
-    if "now searching" in response_text.lower():
-        response_obj["text"] = search_restaurants(user_session)
-        print("in now searching: ", response_obj["text"])
-
-
-        # Note: I was trying to attach a button to the response so the user could pick which 
-        # restaurant they wanted or have the AI pick the restaurant for them, like a "Surprise me"
-        # feature, but this wasn't working. I think it would be cool if we could get the restaurant
-        # from here using this logic and pass the restaurant info to the AI agent, so maybe see
-        # if you can get this to work?
-
-        response_obj["attachments"] = [
-            {
-                "title": "User Options",
-                "text": "Do you have a top choice, or would you like us to pick?",
-                "actions": [
-                    {
-                        "type": "button",
-                        "text": "✅ I have my top choice",
-                        "msg": "yes_clicked",
-                        "msg_in_chat_window": True,
-                        "msg_processing_type": "sendMessage",
-                        "button_id": "yes_button"
-                    },
-                    {
-                        "type": "button",
-                        "text": "🤔 Surprise me!",
-                        "msg": "no_clicked",
-                        "msg_in_chat_window": True,
-                        "msg_processing_type": "sendMessage"
-                    }
-                ]
-            }
-        ]
-    # elif message == "yes_clicked":
-    #     response_obj["text"] = "Great! To select a restaurant, type 'Top choice: ' followed by its number from the list. For example, if you want the first choice in the list, type 'Top choice: 1'."
-    # elif message == "no_clicked":
-    #     our_pick = search_restaurants(user_session, -1)
-    #     response_obj["text"] = f"Great! Let's go with {our_pick}."
-    #     agent_contact(our_pick, sid)  # send the agent our restaurant choice
-    # elif "top choice" in message.lower():
-    #     ascii_text = re.sub(r"[^\x00-\x7F]+", "", message.lower())  # Remove non-ASCII characters
-    #     match = re.search(r"top choice[:*\s]*(\d+)", ascii_text)  # Extract only the number
-    #     if match:
-    #         index = int(match.group(1))
-    #         their_pick = search_restaurants(user_session, index)
-    #         response_obj["text"] = f"Great choice! You've selected {their_pick}."
-    #         agent_contact(their_pick, sid)  # send the agent their restaurant choice
-
-
-    print("AFTER updated:")
-    print("current details collected: ", user_session['preferences'])
-
-    return response_obj
 
 
 def search_restaurants(user_session, index=0):
