@@ -38,7 +38,7 @@ def restaurant_assistant_llm(message, sid):
             - At the end, ONLY WHEN the user has provided all three parameters of cuisine, budget, AND location, 
             respond in a list format:
                 "Cuisine noted: [cuisine]\nLocation noted: [location]\nBudget noted: [budget (1-4)]"
-            Then say, "Thank you! Now searching..."
+            and then say, "Thank you! Now searching..."
         """,
 
         query=message,
@@ -78,7 +78,7 @@ def restaurant_assistant_llm(message, sid):
     
     if "now searching" in response_text.lower():
         # later, we'll pass these results to another LLM to keep asking the user if they like this choice
-        search_restaurants(user_session)
+        response_text = search_restaurants(user_session)
 
     print("AFTER updated:")
     print("current details collected: ", user_session['preferences'])
@@ -105,7 +105,7 @@ def search_restaurants(user_session):
         "term": cuisine,
         "location": location,
         "price": budget,  # Yelp API uses 1 (cheap) to 4 (expensive)
-        "limit": 5,  # Fetch only one restaurant
+        "limit": 5,  # Fetch top five restaurants
         "sort_by": "best_match"
     }
 
@@ -119,6 +119,7 @@ def search_restaurants(user_session):
             address = ", ".join(restaurant["location"]["display_address"])
             rating = restaurant["rating"]
             print(f"🍽️ Found **{name}** ({rating}⭐) in {address} for {cuisine} cuisine within your budget!")
+            
             return f"🍽️ Found **{name}** ({rating}⭐) in {address} for {cuisine} cuisine within your budget!"
         else:
             return "⚠️ Sorry, I couldn't find any matching restaurants. Try adjusting your preferences!"
