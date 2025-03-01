@@ -43,7 +43,7 @@ def restaurant_assistant_llm(message, sid):
 
         query=message,
         temperature=0.7,
-        lastk=20,
+        lastk=5,
         session_id=sid,
         rag_usage=False
     )
@@ -282,8 +282,6 @@ def main():
     sid = session_dict[user]
     print("session id is", sid)
 
-    # return jsonify({"text": restaurant_assistant_llm(message, sid)})
-    
     # Get response from assistant
     response = restaurant_assistant_llm(message, sid)
     return jsonify(response)
