@@ -89,6 +89,7 @@ def restaurant_assistant_llm(message, sid):
 
     if "now searching" in response_text.lower():
         response_text += "\n\n" + search_restaurants(user_session)
+        print("in now searching: ", response_text)
         response = {
             "text": response_text,
             "attachments": [
