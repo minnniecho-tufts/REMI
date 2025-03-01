@@ -92,7 +92,7 @@ def restaurant_assistant_llm(message, sid):
 
     # Handle different scenarios and update the response text or add attachments as needed
     if "now searching" in response_text.lower():
-        response_obj["text"] += "\n\n" + search_restaurants(user_session)
+        response_obj["text"] = search_restaurants(user_session)
         print("in now searching: ", response_obj["text"])
 
 
@@ -172,7 +172,7 @@ def search_restaurants(user_session, index=0):
 
     response = requests.get(YELP_API_URL, headers=headers, params=params)
 
-    res = [f"Here are some suggestions we found for {cuisine} cuisine within your budget!\n"]
+    res = [f"Great! Here are some budget-friendly suggestions we found for {cuisine} cuisine within a {int(radius*0.000621)}-mile radius of {location}!\n"]
     if response.status_code == 200:
         data = response.json()
         if "businesses" in data and data["businesses"]:
