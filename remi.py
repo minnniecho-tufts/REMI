@@ -165,7 +165,7 @@ def search_restaurants(user_session, index=0):
         "term": cuisine,
         "location": location,
         "price": budget,  # Yelp API uses 1 (cheap) to 4 (expensive)
-        "radius": radius,
+        "radius": min(int(radius), 40000),
         "limit": 5,  # Fetch top five restaurants
         "sort_by": "best_match"
     }
@@ -290,5 +290,6 @@ def main():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001)
+
 
 
