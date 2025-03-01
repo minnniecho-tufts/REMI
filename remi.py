@@ -75,7 +75,7 @@ def restaurant_assistant_llm(message, sid):
     
     if "now searching" in response_text.lower():
         # later, we'll pass these results to another LLM to keep asking the user if they like this choice
-        api_result = search_restaurants(user_session)
+        search_restaurants(user_session)
 
     print("AFTER updated:")
     print("current details collected: ", user_session['preferences'])
@@ -102,7 +102,7 @@ def search_restaurants(user_session):
         "term": cuisine,
         "location": location,
         "price": budget,  # Yelp API uses 1 (cheap) to 4 (expensive)
-        "limit": 1,  # Fetch only one restaurant
+        "limit": 5,  # Fetch only one restaurant
         "sort_by": "best_match"
     }
 
@@ -115,6 +115,7 @@ def search_restaurants(user_session):
             name = restaurant["name"]
             address = ", ".join(restaurant["location"]["display_address"])
             rating = restaurant["rating"]
+            print(f"🍽️ Found **{name}** ({rating}⭐) in {address} for {cuisine} cuisine within your budget!")
             return f"🍽️ Found **{name}** ({rating}⭐) in {address} for {cuisine} cuisine within your budget!"
         else:
             return "⚠️ Sorry, I couldn't find any matching restaurants. Try adjusting your preferences!"
@@ -138,7 +139,7 @@ def main():
         
         session_dict[user] = (f"{user}-session")
         
-    sid = session_dict[user][0]
+    sid = session_dict[user]
     print("session id is", sid)
 
     return jsonify({"text": restaurant_assistant_llm(message, sid)})
