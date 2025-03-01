@@ -38,6 +38,7 @@ def restaurant_assistant_llm(message, sid):
             - At the end, ONLY WHEN the user has provided all three parameters of cuisine, budget, AND location, 
             respond in a list format:
                 "Cuisine noted: [cuisine]\nLocation noted: [location]\nBudget noted: [budget (1-4)]"
+            Then say, "Thank you! Now searching..."
         """,
 
         query=message,
