@@ -33,7 +33,7 @@ def restaurant_assistant_llm(message, sid):
                - Store the **budget as a number (1-4)** according to this scale:  
               "cheap": "1", "mid-range": "2", "expensive": "3", "fine dining": "4"
             - THIRD:  Ask the user for their **location** in a natural way (acceptable inputs include city, state, and zip code).
-            - FOURTH: Ask the user what their preferred search radius is. The search radius cannot be greater than 25 miles. Convert the given radius to meters.
+            - FOURTH: Ask the user what their preferred search radius is. The search radius cannot be greater than 25 miles.
             - Put a lot of **emojis** and be **fun and quirky**.
             - Ask the user for the **occasion** to make it more engaging.
             - At the end, after the user has provided all four parameters of cuisine, budget, location, AND search radius, 
@@ -81,7 +81,8 @@ def restaurant_assistant_llm(message, sid):
         ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
         match = re.search(r"Search radius noted[:*\s]*(\d+)", ascii_text)  # Extract only the number
         if match:
-            user_session["preferences"]["radius"] = match.group(1)  # Store as string (convert if needed)
+            metric_radius = int(match.group(1)) * 1609.34
+            user_session["preferences"]["radius"] = str(metric_radius)  # Store as string (convert if needed)
         else:
             user_session["preferences"]["radius"] = None  # Handle cases where no number is found
 
