@@ -35,8 +35,8 @@ def restaurant_assistant_llm(message, sid):
             - THIRD:  Ask the user for their **location** in a natural way.
             - Put a lot of **emojis** and be **fun and quirky**.
             - Ask the user for the **occasion** to make it more engaging.
-            - At the end, ONLY WHEN cuisine, budget, and location have all been collected
-            from the user, respond in a list format:
+            - At the end, ONLY WHEN the user has provided cuisine, budget, AND location, 
+            respond in a list format:
                 "Cuisine noted: [cuisine]\nLocation noted: [location]\nBudget noted: [budget (1-4)]"
         """,
 
