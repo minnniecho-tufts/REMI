@@ -81,6 +81,10 @@ def restaurant_assistant_llm(message, sid):
         response_text = search_restaurants(user_session)
         print("got from api: ", response_text)
 
+    if "here are some suggestions we found" in response_text.lower():
+        # call agent
+        agent_contact(message, sid)
+
     print("AFTER updated:")
     print("current details collected: ", user_session['preferences'])
 
@@ -110,7 +114,7 @@ def search_restaurants(user_session):
 
     response = requests.get(YELP_API_URL, headers=headers, params=params)
 
-    res = ["Here are some suggestions we found for {cuisine} cuisine within your budget!\n"]
+    res = [f"Here are some suggestions we found for {cuisine} cuisine within your budget!\n"]
     if response.status_code == 200:
         data = response.json()
         if "businesses" in data and data["businesses"]:
@@ -131,6 +135,64 @@ def search_restaurants(user_session):
             return "⚠️ Sorry, I couldn't find any matching restaurants. Try adjusting your preferences!"
     
     return f"⚠️ Yelp API request failed. Error {response.status_code}: {response.text}"
+
+
+# COPIED FROM example_agent_tool
+# TODO: update system instructions to instruct agent to only contact friends when the user has
+# decided on a restaurant choice and provided the rocket chat IDs of their friends
+def agent_contact(message, sid):
+    print("in the agent!")
+    return
+
+    system = """
+    You are an AI agent designed to handle user requests.
+    In addition to your own intelligence, you are given access to a set of tools.
+
+    Think step-by-step, breaking down the task into a sequence small steps.
+
+    If you can't resolve the query based on your intelligence, ask the user to execute a tool on your behalf and share the results with you.
+    If you want the user to execute a tool on your behalf, strictly only respond with the tool's name and parameters.
+    Example response for using tool: websearch('weather in boston today')
+
+    The name of the provided tools and their parameters are given below.
+    The output of tool execution will be shared with you so you can decide your next steps.
+
+    ### PROVIDED TOOLS INFORMATION ###
+    ##1. Tool to send an email
+    Name: send_email
+    Parameters: dst, subject, content
+    example usage: send_email('xyz@gmail.com', 'greetings', 'hi, I hope you are well')
+
+
+    ##2. Tool to perform a websearch and get top 5 webpage links based on input query. This is useful to get information about people, topics etc.
+    Name: websearch
+    Parameters: query
+    example usage: websearch('caching in llms')
+    example usage: websearch('lebron james')
+
+
+    ##3. Tool to request content of a webpage
+    Name: get_page
+    Parameters: url
+    example usage: get_page('openAI.com')
+    example usage: get_page('google.com')
+
+    """
+
+    response = generate(model = '4o-mini',
+        system = system,
+        query = message,
+        temperature=0.7,
+        lastk=10,
+        session_id=sid,
+        rag_usage = False)
+
+    try:
+        print(response)
+        return response['response']
+    except Exception as e:
+        print(f"Error occured with parsing output: {response}")
+        raise e
 
 
 @app.route('/query', methods=['POST'])
