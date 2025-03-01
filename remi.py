@@ -81,7 +81,7 @@ def restaurant_assistant_llm(message, sid):
         ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
         match = re.search(r"Search radius noted[:*\s]*(\d+)", ascii_text)  # Extract only the number
         if match:
-            metric_radius = int(match.group(1)) * 1609.34
+            metric_radius = int(int(match.group(1)) * 1609.34)
             user_session["preferences"]["radius"] = str(metric_radius)  # Store as string (convert if needed)
         else:
             user_session["preferences"]["radius"] = None  # Handle cases where no number is found
