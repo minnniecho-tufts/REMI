@@ -56,28 +56,22 @@ def restaurant_assistant_llm(message, sid):
     
     # Extract information from LLM response
     if "Cuisine noted:" in response_text:
-        print('in cuisine')
         ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)
         match = re.search(r"Cuisine noted[:\s]*(.*)", ascii_text)
         if match:
-            user_session["preferences"]["cuisine"] = match.group(1)
-            print("user_session[preferences][cuisine]:", user_session["preferences"]["cuisine"])
+            user_session["preferences"]["cuisine"] = match.group(1).strip()  # Remove extra spaces
 
     if "Budget noted:" in response_text:
-        print('in budget')
         ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)
-        match = re.search(r"Budget noted[:\s]*(.*)", ascii_text)
+        match = re.search(r"Budget noted[:\s]*(\d+)", ascii_text)  # Extract only the number
         if match:
-            user_session["preferences"]["budget"] = match.group(1)
-            print("user_session[preferences][budget]:", user_session["preferences"]["budget"])
+            user_session["preferences"]["budget"] = match.group(1)  # No need to strip since only digits remain
 
     if "Location noted:" in response_text:
-        print('in location')
         ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)
         match = re.search(r"Location noted[:\s]*(.*)", ascii_text)
         if match:
-            user_session["preferences"]["location"] = match.group(1)
-            print("user_session[preferences][location]:", user_session["preferences"]["location"])
+            user_session["preferences"]["location"] = match.group(1).strip()  # Remove extra spaces
     
     if "now searching" in response_text.lower():
         # later, we'll pass these results to another LLM to keep asking the user if they like this choice
