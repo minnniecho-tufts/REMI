@@ -204,46 +204,6 @@ def search_restaurants(user_session, index=0):
 # COPIED FROM example_agent_tool
 # TODO: update system instructions to instruct agent to only contact friends when the user has
 # provided the rocket chat IDs of their friends
-# def agent_contact(message, sid):
-#     print("in the agent!")
-
-#     system = """
-#     You are an AI agent designed contact the main users friend when they give their rocket chat ID of their friend. 
-#     In addition to your own intelligence, you are given access to a set of tools.
-#     Think step-by-step, breaking down the task into a sequence small steps.
-
-#     The name of the provided tools and their parameters are given below.
-#     The output of tool execution will be shared with you so you can decide your next steps.
-
-#     GO THROUGH THESE STEPS IN ORDER:
-#     - FIRST: ask the user to enter their friends rocket chat ID store that in variable user_id
-#     - SECOND : Generate an invitation message to send to the friend for the meal store in variable  message
-#     - THIRD: Use the RC_message tool to send a message.
-
-#     ### PROVIDED TOOLS INFORMATION ###
-#     ##1. Tool to send an email
-#     Name: RC_message
-#     Parameters: user_id , message 
-#     example usage: RC_message(user_id, message)
-    
-    
-#     """
-
-#     response = generate(model = '4o-mini',
-#         system = system,
-#         query = message,
-#         temperature=0.7,
-#         lastk=10,
-#         session_id=sid,
-#         rag_usage = False)
-    
-#     try:
-#         return response['response']
-#     except Exception as e:
-#         print(f"Error occured with parsing output: {response}")
-#         raise e
-#     return 
-    
 def agent_contact(message, sid):
     print("in the agent!")
 
@@ -265,28 +225,25 @@ def agent_contact(message, sid):
     Name: RC_message
     Parameters: user_id , message 
     example usage: RC_message(user_id, message)
+    
+    
     """
 
-    response = generate(
-        model='4o-mini',
-        system=system,
-        query=message,
+    response = generate(model = '4o-mini',
+        system = system,
+        query = message,
         temperature=0.7,
         lastk=10,
         session_id=sid,
-        rag_usage=False
-    )
+        rag_usage = False)
     
     try:
-        assistant_response = response.get('response', "⚠️ No response received.")
-        
-        # Debugging print to check what the assistant is responding with
-        print(f"🤖 Agent Response: {assistant_response}")
-
-        return assistant_response  # This should now explicitly ask for user input
+        return response['response']
     except Exception as e:
-        print(f"⚠️ Error occurred while processing response: {response}")
+        print(f"Error occured with parsing output: {response}")
         raise e
+    return 
+    
 
 def RC_message(user_id, message):
     url = "https://chat.genaiconnect.net/api/v1/chat.postMessage" #URL of RocketChat server, keep the same
