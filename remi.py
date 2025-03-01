@@ -116,7 +116,9 @@ def search_restaurants(user_session):
         if "businesses" in data and data["businesses"]:
             print("found ", len(data["businesses"]), " businesses")
             for i in range(len(data["businesses"])):
-                restaurant = data["businesses"][i][0]
+                print(data["businesses"][i])
+
+                restaurant = data["businesses"][i]
                 name = restaurant["name"]
                 address = ", ".join(restaurant["location"]["display_address"])
                 rating = restaurant["rating"]
