@@ -111,16 +111,19 @@ def search_restaurants(user_session):
 
     response = requests.get(YELP_API_URL, headers=headers, params=params)
 
+    res = ["Here are some suggestions we found for {cuisine} cuisine within your budget!\n"]
     if response.status_code == 200:
         data = response.json()
         if "businesses" in data and data["businesses"]:
-            restaurant = data["businesses"][0]
-            name = restaurant["name"]
-            address = ", ".join(restaurant["location"]["display_address"])
-            rating = restaurant["rating"]
-            print(f"🍽️ Found **{name}** ({rating}⭐) in {address} for {cuisine} cuisine within your budget!")
-            
-            return f"🍽️ Found **{name}** ({rating}⭐) in {address} for {cuisine} cuisine within your budget!"
+            for i in range(len(data["businesses"])):
+                restaurant = data["businesses"][i][0]
+                name = restaurant["name"]
+                address = ", ".join(restaurant["location"]["display_address"])
+                rating = restaurant["rating"]
+                print(f"🍽️ Found **{name}** ({rating}⭐) in {address} for ")
+                res.append("**{name}** ({rating}⭐) in {address}")
+
+            return "".join(res)
         else:
             return "⚠️ Sorry, I couldn't find any matching restaurants. Try adjusting your preferences!"
     
