@@ -125,20 +125,20 @@ def restaurant_assistant_llm(message, sid):
                 ]
             }
         ]
-    # elif message == "yes_clicked":
-    #     response_obj["text"] = "Great! To select a restaurant, type 'Top choice: ' followed by its number from the list. For example, if you want the first choice in the list, type 'Top choice: 1'."
-    # elif message == "no_clicked":
-    #     our_pick = search_restaurants(user_session, -1)
-    #     response_obj["text"] = f"Great! Let's go with {our_pick}."
-    #     agent_contact(our_pick, sid)  # send the agent our restaurant choice
-    # elif "top choice" in message.lower():
-    #     ascii_text = re.sub(r"[^\x00-\x7F]+", "", message.lower())  # Remove non-ASCII characters
-    #     match = re.search(r"top choice[:*\s]*(\d+)", ascii_text)  # Extract only the number
-    #     if match:
-    #         index = int(match.group(1))
-    #         their_pick = search_restaurants(user_session, index)
-    #         response_obj["text"] = f"Great choice! You've selected {their_pick}."
-    #         agent_contact(their_pick, sid)  # send the agent their restaurant choice
+    elif message == "yes_clicked":
+        response_obj["text"] = "Great! To select a restaurant, type 'Top choice: ' followed by its number from the list. For example, if you want the first choice in the list, type 'Top choice: 1'."
+    elif message == "no_clicked":
+        our_pick = search_restaurants(user_session, -1)
+        response_obj["text"] = f"Great! Let's go with {our_pick}."
+        agent_contact(our_pick, sid)  # send the agent our restaurant choice
+    elif "top choice" in message.lower():
+        ascii_text = re.sub(r"[^\x00-\x7F]+", "", message.lower())  # Remove non-ASCII characters
+        match = re.search(r"top choice[:*\s]*(\d+)", ascii_text)  # Extract only the number
+        if match:
+            index = int(match.group(1))
+            their_pick = search_restaurants(user_session, index)
+            response_obj["text"] = f"Great choice! You've selected {their_pick}."
+            agent_contact(their_pick, sid)  # send the agent their restaurant choice
 
 
     print("AFTER updated:")
