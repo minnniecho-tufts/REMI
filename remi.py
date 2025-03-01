@@ -38,13 +38,13 @@ def restaurant_assistant_llm(message, sid):
             - Ask the user for the **occasion** to make it more engaging.
             - At the end, ONLY WHEN the user has provided all four parameters of cuisine, budget, location, AND search radius, 
             respond in a list format:
-                "Cuisine noted: [cuisine]\nLocation noted: [location]\nBudget noted: [budget (1-4)]\nSearch radius noted: [radius]"
+                "Cuisine noted: [cuisine]\nLocation noted: [location]\nBudget noted: [budget (1-4)]\nSearch radius noted: [radius (in meters)]"
             and then say, "Thank you! Now searching..."
         """,
 
         query=message,
         temperature=0.7,
-        lastk=5,
+        lastk=50,
         session_id=sid,
         rag_usage=False
     )
@@ -53,7 +53,7 @@ def restaurant_assistant_llm(message, sid):
     # Initialize an object for user preferences
     user_session = {
             "state": "conversation",
-            "preferences": {"cuisine": None, "budget": None, "location": None}
+            "preferences": {"cuisine": None, "budget": None, "location": None, "radius": None}
     }
     
     # Extract information from LLM response
