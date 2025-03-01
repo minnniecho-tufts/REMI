@@ -80,7 +80,7 @@ def restaurant_assistant_llm(message, sid):
         ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
         match = re.search(r"Search radius noted[:*\s]*(\d+)", ascii_text)  # Extract only the number
         if match:
-            metric_radius = int(int(match.group(1)) * 1609.34)
+            metric_radius = round(int(match.group(1)) * 1609.34)
             user_session["preferences"]["radius"] = str(metric_radius)  # Store as string (convert if needed)
         else:
             user_session["preferences"]["radius"] = None  # Handle cases where no number is found
@@ -98,9 +98,9 @@ def restaurant_assistant_llm(message, sid):
 
         # Note: I was trying to attach a button to the response so the user could pick which 
         # restaurant they wanted or have the AI pick the restaurant for them, like a "Surprise me"
-        # feature, but this wasn't working. I think it would be cool if we could get the restaurant
-        # from here using this logic and pass the restaurant info to the AI agent, so maybe see
-        # if you can get this to work?
+        # feature, but the commented out part wasn't working. I think it would be cool if we could 
+        # get the restaurant from here using this logic and pass the restaurant info to the AI agent, 
+        # so maybe see if you can get this to work?
 
         response_obj["attachments"] = [
             {
@@ -172,7 +172,7 @@ def search_restaurants(user_session, index=0):
 
     response = requests.get(YELP_API_URL, headers=headers, params=params)
 
-    res = [f"Here are some budget-friendly suggestions we found for {cuisine} cuisine within a {int(float(radius) * 0.000621371)}-mile radius of {location}!\n"]
+    res = [f"Here are some budget-friendly suggestions we found for {cuisine} cuisine within a {round(float(radius) * 0.000621371)}-mile radius of {location}!\n"]
     if response.status_code == 200:
         data = response.json()
         if "businesses" in data and data["businesses"]:
