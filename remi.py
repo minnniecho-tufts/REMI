@@ -37,14 +37,14 @@ def restaurant_assistant_llm(message, sid):
             - Put a lot of **emojis** and be **fun and quirky**.
             - Ask the user for the **occasion** to make it more engaging.
             - At the end, after the user has provided all four parameters of cuisine, budget, location, AND search radius, 
-            respond in a list format:
+            respond with the following in a bulleted list format:
                 "Cuisine noted: [cuisine]\nLocation noted: [location]\nBudget noted: [budget (1-4)]\nSearch radius noted: [radius (in meters)]"
             and then say, "Thank you! Now searching..."
         """,
 
         query=message,
         temperature=0.7,
-        lastk=5,
+        lastk=50,
         session_id=sid,
         rag_usage=False
     )
