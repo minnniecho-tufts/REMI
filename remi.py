@@ -94,24 +94,32 @@ def restaurant_assistant_llm(message, sid):
     if "now searching" in response_text.lower():
         response_obj["text"] += "\n\n" + search_restaurants(user_session)
         print("in now searching: ", response_obj["text"])
-        # response_obj["attachments"] = [
-        #     {
-        #         "title": "User Options",
-        #         "text": "Do you have a top choice, or would you like us to pick?",
-        #         "actions": [
-        #             {
-        #                 "type": "button",
-        #                 "text": "✅ I have my top choice",
-        #                 "msg": "yes_clicked"
-        #             },
-        #             {
-        #                 "type": "button",
-        #                 "text": "🤔 Surprise me!",
-        #                 "msg": "no_clicked"
-        #             }
-        #         ]
-        #     }
-        # ]
+
+
+        # Note: I was trying to attach a button to the response so the user could pick which 
+        # restaurant they wanted or have the AI pick the restaurant for them, like a "Surprise me"
+        # feature, but this wasn't working. I think it would be cool if we could get the restaurant
+        # from here using this logic and pass the restaurant info to the AI agent, so maybe see
+        # if you can get this to work?
+
+        response_obj["attachments"] = [
+            {
+                "title": "User Options",
+                "text": "Do you have a top choice, or would you like us to pick?",
+                "actions": [
+                    {
+                        "type": "button",
+                        "text": "✅ I have my top choice",
+                        "msg": "yes_clicked"
+                    },
+                    {
+                        "type": "button",
+                        "text": "🤔 Surprise me!",
+                        "msg": "no_clicked"
+                    }
+                ]
+            }
+        ]
     # elif message == "yes_clicked":
     #     response_obj["text"] = "Great! To select a restaurant, type 'Top choice: ' followed by its number from the list. For example, if you want the first choice in the list, type 'Top choice: 1'."
     # elif message == "no_clicked":
@@ -124,7 +132,7 @@ def restaurant_assistant_llm(message, sid):
     #     if match:
     #         index = int(match.group(1))
     #         their_pick = search_restaurants(user_session, index)
-    #         response_obj["text"] = f"Great choice! You've selected {their_pick}. I'll arrange your reservation."
+    #         response_obj["text"] = f"Great choice! You've selected {their_pick}."
     #         agent_contact(their_pick, sid)  # send the agent your restaurant choice
 
 
