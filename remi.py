@@ -33,11 +33,12 @@ def restaurant_assistant_llm(message, sid):
                - Store the **budget as a number (1-4)** according to this scale:  
               "cheap": "1", "mid-range": "2", "expensive": "3", "fine dining": "4"
             - THIRD:  Ask the user for their **location** in a natural way (acceptable inputs include city, state, and zip code).
+            - FOURTH: Ask the user what their preferred search radius is. The search radius cannot be greater than 25 miles. Convert their answers to meters.
             - Put a lot of **emojis** and be **fun and quirky**.
             - Ask the user for the **occasion** to make it more engaging.
             - At the end, ONLY WHEN the user has provided all three parameters of cuisine, budget, AND location, 
             respond in a list format:
-                "Cuisine noted: [cuisine]\nLocation noted: [location]\nBudget noted: [budget (1-4)]"
+                "Cuisine noted: [cuisine]\nLocation noted: [location]\nBudget noted: [budget (1-4)]\nSearch radius noted: [radius]"
             and then say, "Thank you! Now searching..."
         """,
 
@@ -69,13 +70,21 @@ def restaurant_assistant_llm(message, sid):
             user_session["preferences"]["budget"] = match.group(1)  # Store as string (convert if needed)
         else:
             user_session["preferences"]["budget"] = None  # Handle cases where no number is found
-
+    
     if "Location noted:" in response_text:
         ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
         match = re.search(r"Location noted[:*\s]*(\S.*)", ascii_text)  # Capture actual text after "*Location noted:*"
         if match:
             user_session["preferences"]["location"] = match.group(1).strip()  # Remove extra spaces
     
+    if "Search radius noted:" in response_text:
+        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
+        match = re.search(r"Budget noted[:*\s]*(\d+)", ascii_text)  # Extract only the number
+        if match:
+            user_session["preferences"]["radius"] = match.group(1)  # Store as string (convert if needed)
+        else:
+            user_session["preferences"]["radius"] = None  # Handle cases where no number is found
+
     if "now searching" in response_text.lower():
         # later, we'll pass these results to another LLM to keep asking the user if they like this choice
         response_text = search_restaurants(user_session)
@@ -98,6 +107,7 @@ def search_restaurants(user_session):
     cuisine = user_session["preferences"]["cuisine"]
     budget = user_session["preferences"]["budget"]
     location = user_session["preferences"]["location"]
+    radius = user_session["preferences"]["radius"]
 
     headers = {
         "Authorization": f"Bearer {API_KEY}",
@@ -108,6 +118,7 @@ def search_restaurants(user_session):
         "term": cuisine,
         "location": location,
         "price": budget,  # Yelp API uses 1 (cheap) to 4 (expensive)
+        "radius": radius,
         "limit": 5,  # Fetch top five restaurants
         "sort_by": "best_match"
     }
