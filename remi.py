@@ -102,37 +102,29 @@ def restaurant_assistant_llm(message, sid):
         # from here using this logic and pass the restaurant info to the AI agent, so maybe see
         # if you can get this to work?
 
-        response_obj["blocks"] = [
+        response_obj["attachments"] = [
             {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": "Do you have a top choice, or would you like us to pick?"
-                }
-            },
-            {
-                "type": "actions",
-                "elements": [
+                "title": "User Options",
+                "text": "Do you have a top choice, or would you like us to pick?",
+                "actions": [
                     {
                         "type": "button",
-                        "text": {
-                            "type": "plain_text",
-                            "text": "✅ I have my top choice"
-                        },
-                        "action_id": "yes_clicked"
+                        "text": "✅ I have my top choice",
+                        "msg": "yes_clicked",
+                        "msg_in_chat_window": True,
+                        "msg_processing_type": "sendMessage",
+                        "button_id": "yes_button"
                     },
                     {
                         "type": "button",
-                        "text": {
-                            "type": "plain_text",
-                            "text": "🤔 Surprise me!"
-                        },
-                        "action_id": "no_clicked"
+                        "text": "🤔 Surprise me!",
+                        "msg": "no_clicked",
+                        "msg_in_chat_window": True,
+                        "msg_processing_type": "sendMessage"
                     }
                 ]
             }
         ]
-
     # elif message == "yes_clicked":
     #     response_obj["text"] = "Great! To select a restaurant, type 'Top choice: ' followed by its number from the list. For example, if you want the first choice in the list, type 'Top choice: 1'."
     # elif message == "no_clicked":
