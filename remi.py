@@ -125,7 +125,8 @@ def restaurant_assistant_llm(message, sid):
                 ]
             }
         ]
-    # elif message == "yes_clicked":
+    
+    # if message == "yes_clicked":
     #     response_obj["text"] = "Great! To select a restaurant, type 'Top choice: ' followed by its number from the list. For example, if you want the first choice in the list, type 'Top choice: 1'."
     # elif message == "no_clicked":
     #     our_pick = search_restaurants(user_session, -1)
