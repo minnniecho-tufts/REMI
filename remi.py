@@ -90,7 +90,7 @@ def restaurant_assistant_llm(message, sid):
     if "now searching" in response_text.lower():
         response_text += "\n\n" + search_restaurants(user_session)
         print("in now searching: ", response_text)
-        response = {
+        button_response = {
             "text": response_text,
             "attachments": [
                 {
@@ -116,7 +116,7 @@ def restaurant_assistant_llm(message, sid):
                 }
             ]
         }
-        return jsonify(response)
+        return jsonify(button_response)
 
     if message == "yes_clicked":
         response_text = "Great! To select a restaurant, type 'Top choice: ' followed by its number from the list. For example, if you want the first choice in the list, type 'Top choice: 1'."
