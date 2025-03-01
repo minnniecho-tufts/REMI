@@ -102,30 +102,43 @@ def restaurant_assistant_llm(message, sid):
         # from here using this logic and pass the restaurant info to the AI agent, so maybe see
         # if you can get this to work?
 
-        response_obj["attachments"] = [
+        response_obj["blocks"] = [
             {
-                "title": "User Options",
-                "text": "Do you have a top choice, or would you like us to pick?",
-                "actions": [
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "Do you have a top choice, or would you like us to pick?"
+                }
+            },
+            {
+                "type": "actions",
+                "elements": [
                     {
                         "type": "button",
-                        "text": "✅ I have my top choice",
-                        "msg": "yes_clicked"
+                        "text": {
+                            "type": "plain_text",
+                            "text": "✅ I have my top choice"
+                        },
+                        "action_id": "yes_clicked"
                     },
                     {
                         "type": "button",
-                        "text": "🤔 Surprise me!",
-                        "msg": "no_clicked"
+                        "text": {
+                            "type": "plain_text",
+                            "text": "🤔 Surprise me!"
+                        },
+                        "action_id": "no_clicked"
                     }
                 ]
             }
         ]
+
     # elif message == "yes_clicked":
     #     response_obj["text"] = "Great! To select a restaurant, type 'Top choice: ' followed by its number from the list. For example, if you want the first choice in the list, type 'Top choice: 1'."
     # elif message == "no_clicked":
     #     our_pick = search_restaurants(user_session, -1)
     #     response_obj["text"] = f"Great! Let's go with {our_pick}."
-    #     agent_contact(our_pick, sid)  # send the agent your restaurant choice
+    #     agent_contact(our_pick, sid)  # send the agent our restaurant choice
     # elif "top choice" in message.lower():
     #     ascii_text = re.sub(r"[^\x00-\x7F]+", "", message.lower())  # Remove non-ASCII characters
     #     match = re.search(r"top choice[:*\s]*(\d+)", ascii_text)  # Extract only the number
@@ -133,7 +146,7 @@ def restaurant_assistant_llm(message, sid):
     #         index = int(match.group(1))
     #         their_pick = search_restaurants(user_session, index)
     #         response_obj["text"] = f"Great choice! You've selected {their_pick}."
-    #         agent_contact(their_pick, sid)  # send the agent your restaurant choice
+    #         agent_contact(their_pick, sid)  # send the agent their restaurant choice
 
 
     print("AFTER updated:")
@@ -172,8 +185,6 @@ def search_restaurants(user_session, index=0):
         data = response.json()
         if "businesses" in data and data["businesses"]:
             for i in range(len(data["businesses"])):
-                print(data["businesses"][i])
-
                 restaurant = data["businesses"][i]
                 name = restaurant["name"]
                 address = ", ".join(restaurant["location"]["display_address"])
@@ -181,9 +192,9 @@ def search_restaurants(user_session, index=0):
                 print(f"🍽️ Found **{name}** ({rating}⭐) in {address}")
                 res.append(f"{i+1}. **{name}** ({rating}⭐) in {address}\n")
 
-            if index > 0 and index < len(res):
+            if index > 0 and index < len(res):  # return a specific restaurant in the result list
                 return res[index]
-            elif index == -1:
+            elif index == -1:                   # return a random restaurant in the list
                 import random
                 return res[random.randint(1, len(res))]
             
@@ -196,7 +207,7 @@ def search_restaurants(user_session, index=0):
 
 # COPIED FROM example_agent_tool
 # TODO: update system instructions to instruct agent to only contact friends when the user has
-# decided on a restaurant choice and provided the rocket chat IDs of their friends
+# provided the rocket chat IDs of their friends
 def agent_contact(message, sid):
     print("in the agent!")
     return
