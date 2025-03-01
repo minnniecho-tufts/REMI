@@ -79,11 +79,12 @@ def restaurant_assistant_llm(message, sid):
     if "Search radius noted:" in response_text:
         ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
         match = re.search(r"Search radius noted[:*\s]*(\d+)", ascii_text)  # Extract only the number
-        if match:
-            metric_radius = int(int(match.group(1)) * 1609.34)
-            user_session["preferences"]["radius"] = str(metric_radius)  # Store as string (convert if needed)
-        else:
-            user_session["preferences"]["radius"] = None  # Handle cases where no number is found
+    if match:
+        miles = int(match.group(1))  # Convert input to an integer
+        metric_radius = min(int(miles * 1609.34), 40000)  # Convert miles to meters, cap at 40000
+        user_session["preferences"]["radius"] = str(metric_radius)  # Store as string (convert if needed)
+    else:
+        user_session["preferences"]["radius"] = None  # Handle cases where no number is found
 
     # Create the response object with the basic text
     response_obj = {
@@ -165,7 +166,7 @@ def search_restaurants(user_session, index=0):
         "term": cuisine,
         "location": location,
         "price": budget,  # Yelp API uses 1 (cheap) to 4 (expensive)
-        "radius": min(int(radius), 40000),
+        "radius": radius,
         "limit": 5,  # Fetch top five restaurants
         "sort_by": "best_match"
     }
@@ -290,6 +291,7 @@ def main():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001)
+
 
 
 
