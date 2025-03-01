@@ -56,20 +56,22 @@ def restaurant_assistant_llm(message, sid):
     
     # Extract information from LLM response
     if "Cuisine noted:" in response_text:
-        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)
-        match = re.search(r"Cuisine noted[:\s]*(.*)", ascii_text)
+        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
+        match = re.search(r"Cuisine noted[:*\s]*(\S.*)", ascii_text)  # Capture actual text after "*Cuisine noted:*"
         if match:
             user_session["preferences"]["cuisine"] = match.group(1).strip()  # Remove extra spaces
 
     if "Budget noted:" in response_text:
-        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)
-        match = re.search(r"Budget noted[:\s]*(\d+)", ascii_text)  # Extract only the number
+        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
+        match = re.search(r"Budget noted[:*\s]*(\d+)", ascii_text)  # Extract only the number
         if match:
-            user_session["preferences"]["budget"] = match.group(1)  # No need to strip since only digits remain
+            user_session["preferences"]["budget"] = match.group(1)  # Store as string (convert if needed)
+        else:
+            user_session["preferences"]["budget"] = None  # Handle cases where no number is found
 
     if "Location noted:" in response_text:
-        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)
-        match = re.search(r"Location noted[:\s]*(.*)", ascii_text)
+        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
+        match = re.search(r"Location noted[:*\s]*(\S.*)", ascii_text)  # Capture actual text after "*Location noted:*"
         if match:
             user_session["preferences"]["location"] = match.group(1).strip()  # Remove extra spaces
     
