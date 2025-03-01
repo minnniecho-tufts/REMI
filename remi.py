@@ -88,32 +88,32 @@ def restaurant_assistant_llm(message, sid):
 
 
     if "now searching" in response_text.lower():
-        response_text += "\n\n" + search_restaurants(user_session, 0)
+        response_text += "\n\n" + search_restaurants(user_session)
         response = {
-                    "text": response_text,
-                    "attachments": [
+            "text": response_text,
+            "attachments": [
+                {
+                    "title": "User Options",
+                    "text": "Do you have a top choice, or would you like us to pick?",
+                    "actions": [
                         {
-                            "title": "User Options",
-                            "text": "Do you have a top choice, or would you like us to pick?",
-                            "actions": [
-                                {
-                                    "type": "button",
-                                    "text": "✅ I have my top choice",
-                                    "msg": "yes_clicked",
-                                    "msg_in_chat_window": True,
-                                    "msg_processing_type": "sendMessage",
-                                    "button_id": "yes_button"
-                                },
-                                {
-                                    "type": "button",
-                                    "text": "🤔 Surprise me!",
-                                    "msg": "no_clicked",
-                                    "msg_in_chat_window": True,
-                                    "msg_processing_type": "sendMessage"
-                                }
-                            ]
+                            "type": "button",
+                            "text": "✅ I have my top choice",
+                            "msg": "yes_clicked"
+                            # "msg_in_chat_window": True,
+                            # "msg_processing_type": "sendMessage",
+                            # "button_id": "yes_button"
+                        },
+                        {
+                            "type": "button",
+                            "text": "🤔 Surprise me!",
+                            "msg": "no_clicked"
+                            # "msg_in_chat_window": True,
+                            # "msg_processing_type": "sendMessage"
                         }
                     ]
+                }
+            ]
         }
         return jsonify(response)
 
@@ -122,7 +122,7 @@ def restaurant_assistant_llm(message, sid):
     elif message == "no_clicked":
         our_pick = search_restaurants(user_session, -1)
         response_text = f"Great! Let's go with {our_pick}."
-        agent_contact(our_pick, sid)
+        agent_contact(our_pick, sid)        # send the agent your restaurant choice
 
     if "top choice" in message.lower():
         ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
@@ -130,7 +130,8 @@ def restaurant_assistant_llm(message, sid):
         if match:
             index = int(match.group(1))
         their_pick = search_restaurants(user_session, index)
-        agent_contact(their_pick, sid)
+        agent_contact(their_pick, sid)      # send the agent your restaurant choice
+
 
     print("AFTER updated:")
     print("current details collected: ", user_session['preferences'])
@@ -138,7 +139,7 @@ def restaurant_assistant_llm(message, sid):
     return response_text
 
 
-def search_restaurants(user_session, index):
+def search_restaurants(user_session, index=0):
     print('In search restaurants function')
     # """Uses Yelp API to find a restaurant based on user preferences."""
     
