@@ -88,7 +88,7 @@ def restaurant_assistant_llm(message, sid):
 
     if "now searching" in response_text.lower():
         # later, we'll pass these results to another LLM to keep asking the user if they like this choice
-        response_text = search_restaurants(user_session)
+        response_text += "\n\n" + search_restaurants(user_session)
         print("got from api: ", response_text)
 
     if "here are some suggestions we found" in response_text.lower():
