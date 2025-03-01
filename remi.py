@@ -29,11 +29,9 @@ def restaurant_assistant_llm(message, sid):
               What type of food are you in the mood for?  
             
             - FIRST: Ask the user for their **cuisine preference** in a natural way.
-               - If the user provides cuisine: 
             - SECOND: Ask the user for their **budget** in a natural way.
                - Store the **budget as a number (1-4)** according to this scale:  
               "cheap": "1", "mid-range": "2", "expensive": "3", "fine dining": "4"
-               - If the user provides budget: ""
             - THIRD:  Ask the user for their **location** in a natural way.
             - Put a lot of **emojis** and be **fun and quirky**.
             - Ask the user for the **occasion** to make it more engaging.
@@ -50,13 +48,13 @@ def restaurant_assistant_llm(message, sid):
     )
     response_text = response.get("response", "⚠️ Sorry, I couldn't process that. Could you rephrase?").strip()
 
-
-    # Extract information from LLM response
+    # Initialize an object for user preferences
     user_session = {
             "state": "conversation",
             "preferences": {"cuisine": None, "budget": None, "location": None}
     }
     
+    # Extract information from LLM response
     if "Cuisine noted:" in response_text:
         print('in cuisine')
         ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)
@@ -83,7 +81,7 @@ def restaurant_assistant_llm(message, sid):
     
     if "now searching" in response_text.lower():
         # later, we'll pass these results to another LLM to keep asking the user if they like this choice
-        search_restaurants(user_session)
+        api_result = search_restaurants(user_session)
 
     print("AFTER updated:")
     print("current details collected: ", user_session['preferences'])
