@@ -32,7 +32,7 @@ def restaurant_assistant_llm(message, sid):
             - SECOND: Ask the user for their **budget** in a natural way.
                - Store the **budget as a number (1-4)** according to this scale:  
               "cheap": "1", "mid-range": "2", "expensive": "3", "fine dining": "4"
-            - THIRD:  Ask the user for their **location** in a natural way.
+            - THIRD:  Ask the user for their **location** in a natural way (acceptable inputs include city, state, and zip code).
             - Put a lot of **emojis** and be **fun and quirky**.
             - Ask the user for the **occasion** to make it more engaging.
             - At the end, ONLY WHEN the user has provided all three parameters of cuisine, budget, AND location, 
@@ -123,7 +123,7 @@ def search_restaurants(user_session):
                 address = ", ".join(restaurant["location"]["display_address"])
                 rating = restaurant["rating"]
                 print(f"🍽️ Found **{name}** ({rating}⭐) in {address}")
-                res.append("**{name}** ({rating}⭐) in {address}\n")
+                res.append(f"**{name}** ({rating}⭐) in {address}\n")
 
             print("".join(res))
             return "".join(res)
