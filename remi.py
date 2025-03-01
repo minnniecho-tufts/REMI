@@ -94,38 +94,39 @@ def restaurant_assistant_llm(message, sid):
     if "now searching" in response_text.lower():
         response_obj["text"] += "\n\n" + search_restaurants(user_session)
         print("in now searching: ", response_obj["text"])
-        response_obj["attachments"] = [
-            {
-                "title": "User Options",
-                "text": "Do you have a top choice, or would you like us to pick?",
-                "actions": [
-                    {
-                        "type": "button",
-                        "text": "✅ I have my top choice",
-                        "msg": "yes_clicked"
-                    },
-                    {
-                        "type": "button",
-                        "text": "🤔 Surprise me!",
-                        "msg": "no_clicked"
-                    }
-                ]
-            }
-        ]
-    elif message == "yes_clicked":
-        response_obj["text"] = "Great! To select a restaurant, type 'Top choice: ' followed by its number from the list. For example, if you want the first choice in the list, type 'Top choice: 1'."
-    elif message == "no_clicked":
-        our_pick = search_restaurants(user_session, -1)
-        response_obj["text"] = f"Great! Let's go with {our_pick}."
-        agent_contact(our_pick, sid)  # send the agent your restaurant choice
-    elif "top choice" in message.lower():
-        ascii_text = re.sub(r"[^\x00-\x7F]+", "", message.lower())  # Remove non-ASCII characters
-        match = re.search(r"top choice[:*\s]*(\d+)", ascii_text)  # Extract only the number
-        if match:
-            index = int(match.group(1))
-            their_pick = search_restaurants(user_session, index)
-            response_obj["text"] = f"Great choice! You've selected {their_pick}. I'll arrange your reservation."
-            agent_contact(their_pick, sid)  # send the agent your restaurant choice
+        # response_obj["attachments"] = [
+        #     {
+        #         "title": "User Options",
+        #         "text": "Do you have a top choice, or would you like us to pick?",
+        #         "actions": [
+        #             {
+        #                 "type": "button",
+        #                 "text": "✅ I have my top choice",
+        #                 "msg": "yes_clicked"
+        #             },
+        #             {
+        #                 "type": "button",
+        #                 "text": "🤔 Surprise me!",
+        #                 "msg": "no_clicked"
+        #             }
+        #         ]
+        #     }
+        # ]
+    # elif message == "yes_clicked":
+    #     response_obj["text"] = "Great! To select a restaurant, type 'Top choice: ' followed by its number from the list. For example, if you want the first choice in the list, type 'Top choice: 1'."
+    # elif message == "no_clicked":
+    #     our_pick = search_restaurants(user_session, -1)
+    #     response_obj["text"] = f"Great! Let's go with {our_pick}."
+    #     agent_contact(our_pick, sid)  # send the agent your restaurant choice
+    # elif "top choice" in message.lower():
+    #     ascii_text = re.sub(r"[^\x00-\x7F]+", "", message.lower())  # Remove non-ASCII characters
+    #     match = re.search(r"top choice[:*\s]*(\d+)", ascii_text)  # Extract only the number
+    #     if match:
+    #         index = int(match.group(1))
+    #         their_pick = search_restaurants(user_session, index)
+    #         response_obj["text"] = f"Great choice! You've selected {their_pick}. I'll arrange your reservation."
+    #         agent_contact(their_pick, sid)  # send the agent your restaurant choice
+
 
     print("AFTER updated:")
     print("current details collected: ", user_session['preferences'])
