@@ -86,14 +86,51 @@ def restaurant_assistant_llm(message, sid):
         else:
             user_session["preferences"]["radius"] = None  # Handle cases where no number is found
 
-    if "now searching" in response_text.lower():
-        # later, we'll pass these results to another LLM to keep asking the user if they like this choice
-        response_text += "\n\n" + search_restaurants(user_session)
-        print("got from api: ", response_text)
 
-    if "here are some suggestions we found" in response_text.lower():
-        # call agent
-        agent_contact(message, sid)
+    if "now searching" in response_text.lower():
+        response_text += "\n\n" + search_restaurants(user_session, 0)
+        response = {
+                    "text": response_text,
+                    "attachments": [
+                        {
+                            "title": "User Options",
+                            "text": "Do you have a top choice, or would you like us to pick?",
+                            "actions": [
+                                {
+                                    "type": "button",
+                                    "text": "✅ I have my top choice",
+                                    "msg": "yes_clicked",
+                                    "msg_in_chat_window": True,
+                                    "msg_processing_type": "sendMessage",
+                                    "button_id": "yes_button"
+                                },
+                                {
+                                    "type": "button",
+                                    "text": "🤔 Surprise me!",
+                                    "msg": "no_clicked",
+                                    "msg_in_chat_window": True,
+                                    "msg_processing_type": "sendMessage"
+                                }
+                            ]
+                        }
+                    ]
+        }
+        return jsonify(response)
+
+    if message == "yes_clicked":
+        response_text = "Great! To select a restaurant, type 'Top choice: ' followed by its number from the list. For example, if you want the first choice in the list, type 'Top choice: 1'."
+    elif message == "no_clicked":
+        our_pick = search_restaurants(user_session, -1)
+        response_text = f"Great! Let's go with {our_pick}."
+        agent_contact(our_pick, sid)
+
+    if "top choice" in message.lower():
+        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
+        match = re.search(r"top choice[:*\s]*(\d+)", ascii_text)  # Extract only the number
+        if match:
+            index = int(match.group(1))
+        their_pick = search_restaurants(user_session, index)
+        agent_contact(their_pick, sid)
 
     print("AFTER updated:")
     print("current details collected: ", user_session['preferences'])
@@ -101,7 +138,7 @@ def restaurant_assistant_llm(message, sid):
     return response_text
 
 
-def search_restaurants(user_session):
+def search_restaurants(user_session, index):
     print('In search restaurants function')
     # """Uses Yelp API to find a restaurant based on user preferences."""
     
@@ -130,7 +167,6 @@ def search_restaurants(user_session):
     if response.status_code == 200:
         data = response.json()
         if "businesses" in data and data["businesses"]:
-            print("found ", len(data["businesses"]), " businesses")
             for i in range(len(data["businesses"])):
                 print(data["businesses"][i])
 
@@ -139,9 +175,14 @@ def search_restaurants(user_session):
                 address = ", ".join(restaurant["location"]["display_address"])
                 rating = restaurant["rating"]
                 print(f"🍽️ Found **{name}** ({rating}⭐) in {address}")
-                res.append(f"**{name}** ({rating}⭐) in {address}\n")
+                res.append(f"{i+1}. **{name}** ({rating}⭐) in {address}\n")
 
-            print("".join(res))
+            if index > 0:
+                return res[index]
+            elif index == -1:
+                import random
+                return res[random.randint(1, len(res))]
+            
             return "".join(res)
         else:
             return "⚠️ Sorry, I couldn't find any matching restaurants. Try adjusting your preferences!"
