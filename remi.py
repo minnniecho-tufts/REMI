@@ -3,19 +3,19 @@ import os
 import requests
 from flask import Flask, request, jsonify
 from llmproxy import generate
-from dotenv import load_dotenv  
+# from dotenv import load_dotenv  
 import re
 
 app = Flask(__name__)
 
 # Load API Key from .env file
-load_dotenv()
+# load_dotenv()
 API_KEY = os.getenv("YELP_API_KEY")   
 YELP_API_URL = "https://api.yelp.com/v3/businesses/search"
 session_dict = {}
 
 
-def restaurant_assistant_llm(message, sid, user_session):
+def restaurant_assistant_llm(message, sid):
     """Handles the full conversation and recommends a restaurant."""
     
     response = generate(
@@ -48,12 +48,15 @@ def restaurant_assistant_llm(message, sid, user_session):
         session_id=sid,
         rag_usage=False
     )
-    print("BEFORE")
-    print("current details collected: ", user_session['preferences'])
     response_text = response.get("response", "⚠️ Sorry, I couldn't process that. Could you rephrase?").strip()
 
 
     # Extract information from LLM response
+    user_session = {
+            "state": "conversation",
+            "preferences": {"cuisine": None, "budget": None, "location": None}
+    }
+    
     if "Cuisine noted:" in response_text:
         print('in cuisine')
         ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)
@@ -140,18 +143,13 @@ def main():
     if user not in session_dict:
         print("new user, ", user)
         # Single user session
-        session = {
-            "state": "conversation",
-            "preferences": {"cuisine": None, "budget": None, "location": None}
-        }
         
-        session_dict[user] = (f"{user}-session", session)
+        session_dict[user] = (f"{user}-session")
         
     sid = session_dict[user][0]
-    user_session = session_dict[user][1]
     print("session id is", sid)
 
-    return jsonify({"text": restaurant_assistant_llm(message, sid, user_session)})
+    return jsonify({"text": restaurant_assistant_llm(message, sid)})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001)
