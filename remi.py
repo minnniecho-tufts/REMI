@@ -79,6 +79,7 @@ def restaurant_assistant_llm(message, sid):
     if "now searching" in response_text.lower():
         # later, we'll pass these results to another LLM to keep asking the user if they like this choice
         response_text = search_restaurants(user_session)
+        print("got from api: ", response_text)
 
     print("AFTER updated:")
     print("current details collected: ", user_session['preferences'])
@@ -93,8 +94,6 @@ def search_restaurants(user_session):
     cuisine = user_session["preferences"]["cuisine"]
     budget = user_session["preferences"]["budget"]
     location = user_session["preferences"]["location"]
-
-    print("cuisine: ", cuisine, "budget: ", budget, "location: ", location)
 
     headers = {
         "Authorization": f"Bearer {API_KEY}",
@@ -115,14 +114,16 @@ def search_restaurants(user_session):
     if response.status_code == 200:
         data = response.json()
         if "businesses" in data and data["businesses"]:
+            print("found ", len(data["businesses"]), " businesses")
             for i in range(len(data["businesses"])):
                 restaurant = data["businesses"][i][0]
                 name = restaurant["name"]
                 address = ", ".join(restaurant["location"]["display_address"])
                 rating = restaurant["rating"]
-                print(f"🍽️ Found **{name}** ({rating}⭐) in {address} for ")
-                res.append("**{name}** ({rating}⭐) in {address}")
+                print(f"🍽️ Found **{name}** ({rating}⭐) in {address}")
+                res.append("**{name}** ({rating}⭐) in {address}\n")
 
+            print("".join(res))
             return "".join(res)
         else:
             return "⚠️ Sorry, I couldn't find any matching restaurants. Try adjusting your preferences!"
