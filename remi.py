@@ -35,7 +35,7 @@ def restaurant_assistant_llm(message, sid):
             - THIRD:  Ask the user for their **location** in a natural way.
             - Put a lot of **emojis** and be **fun and quirky**.
             - Ask the user for the **occasion** to make it more engaging.
-            - At the end, ONLY WHEN the user has provided cuisine, budget, AND location, 
+            - At the end, ONLY WHEN the user has provided all three parameters of cuisine, budget, AND location, 
             respond in a list format:
                 "Cuisine noted: [cuisine]\nLocation noted: [location]\nBudget noted: [budget (1-4)]"
         """,
@@ -61,7 +61,7 @@ def restaurant_assistant_llm(message, sid):
         match = re.search(r"Cuisine noted[:\s]*(.*)", ascii_text)
         if match:
             user_session["preferences"]["cuisine"] = match.group(1)
-            print("user_session[preferences][cuisine]):", user_session["preferences"]["cuisine"])
+            print("user_session[preferences][cuisine]:", user_session["preferences"]["cuisine"])
 
     if "Budget noted:" in response_text:
         print('in budget')
@@ -69,7 +69,7 @@ def restaurant_assistant_llm(message, sid):
         match = re.search(r"Budget noted[:\s]*(.*)", ascii_text)
         if match:
             user_session["preferences"]["budget"] = match.group(1)
-            print("user_session[preferences][budget]):", user_session["preferences"]["budget"])
+            print("user_session[preferences][budget]:", user_session["preferences"]["budget"])
 
     if "Location noted:" in response_text:
         print('in location')
@@ -77,7 +77,7 @@ def restaurant_assistant_llm(message, sid):
         match = re.search(r"Location noted[:\s]*(.*)", ascii_text)
         if match:
             user_session["preferences"]["location"] = match.group(1)
-            print("user_session[preferences][location]):", user_session["preferences"]["location"])
+            print("user_session[preferences][location]:", user_session["preferences"]["location"])
     
     if "now searching" in response_text.lower():
         # later, we'll pass these results to another LLM to keep asking the user if they like this choice
