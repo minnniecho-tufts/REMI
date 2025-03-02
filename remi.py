@@ -37,9 +37,9 @@ session_dict = load_sessions()
 
 
 ### --- MAIN BOT FUNCTION --- ###
-def restaurant_assistant_llm(message, sid, user):
+def restaurant_assistant_llm(message, user):
     """Handles the full conversation and recommends a restaurant."""
-    
+    sid = session_dict[user]["session_id"]
     response = generate(
         model="4o-mini",
         system="""
@@ -151,9 +151,16 @@ def restaurant_assistant_llm(message, sid, user):
     
     if message == "yes_clicked":
         # invite friends
-        agent_response = agent_contact(sid, session_dict[user]["top_choice"])
-         
+        agent_response = agent_contact(user)
         response_obj["text"] = agent_response
+        match_user_id = re.search(r"Friend's Rocket.Chat ID: (.+)", agent_response)
+        match_message = re.search(r"Invitation Message: (.+)", agent_response)
+        user_id = match_user_id.group(1).strip()
+        message_text = match_message.group(1).strip()
+        # Send the message via Rocket.Chat
+        RC_message(user_id, message_text)
+
+        
     elif message == "no_clicked":
         # send the agent our restaurant choice
         response_obj["text"] = "Table for one it is!"
@@ -212,7 +219,9 @@ def search_restaurants(user_session):
 # COPIED FROM example_agent_tool
 # TODO: update system instructions to instruct agent to only contact friends when the user has
 # provided the rocket chat IDs of their friends
-def agent_contact(sid, top_choice):
+def agent_contact(user):
+    sid = session_dict[user]["session_id"]
+    top_choice = session_dict[user]["top_choice"]
     print("in the agent!")
     print(f"Selected restaurant: {top_choice}")
 
@@ -220,39 +229,40 @@ def agent_contact(sid, top_choice):
     You are an AI agent helping users invite friends to a restaurant reservation. 
     The user has chosen **{top_choice}** as their restaurant.
 
-    In addition to your own intelligence, you are given access to a messaging tool.
+    # In addition to your own intelligence, you are given access to a messaging tool.
 
-    Think step-by-step, breaking down the task into a sequence small steps.
+    # Think step-by-step, breaking down the task into a sequence small steps.
 
     If you can't resolve the query based on your intelligence, ask the user to execute a tool on your behalf and share the results with you.
     If you want the user to execute a tool on your behalf, strictly only respond with the tool's name and parameters.
     Example response for using tool: RC_message("session-id", "join me for dinner")
 
-    The name of the provided tools and their parameters are given below.
-    The output of tool execution will be shared with you so you can decide your next steps.
 
-    ### PROVIDED TOOLS INFORMATION ###
-    ##1. Tool to send an email
-    Name: RC_message
-    Parameters: user_id , invitation_message
-    example usage: RC_message("@niam.lakhani", "join me for dinner at Masala 29th March 8pm?"). 
-    Once you have all the parameters to send a message, display them to the user
-    and respond with "RC_message(user_id, invitation_message)" with the parameters filled in 
-    appropriately."""
-
-    # GO THROUGH THESE STEPS:
-    # 1️. Ask the user to give you a date and time they want to make a reservation at {top_choice}
-    # 2. **Ask the user for their friend's Rocket.Chat ID** (store it in user_id).
-    # 3. **Generate a for their friend (store it in message).
-    # 4. **Once both details are collected, display them in the following format:**
-    
-    #     ✅ **Friend's Rocket.Chat ID:** [user_id]  
-    #     ✅ **Invitation Message:** [message]  
+        GO THROUGH THESE STEPS:
+        1️. Ask the user to give you a date and time they want to make a reservation at {top_choice}
+        2. **Ask the user for their friend's Rocket.Chat ID** (store it in user_id).
+        3. **Generate a for their friend (store it in message).
+        4. **Once both details are collected, display them in the following format:**
         
-    #     📩 *Thank you! Now contacting your friend...*
+            ✅ **Friend's Rocket.Chat ID:** [user_id]  
+            ✅ **Invitation Message:** [message]  
+            
+            📩 *Thank you! Now contacting your friend...*
 
-    # 4️⃣ **After you have all information respond with Friend's "Rocket.Chat ID:** [user_id]\n **Invitation Message:** [message]\n" 
+        4️⃣ **After you have all information respond with Friend's "Rocket.Chat ID:** [user_id]\n **Invitation Message:** [message]\n" """
 
+    # The name of the provided tools and their parameters are given below.
+    # The output of tool execution will be shared with you so you can decide your next steps.
+
+    # ### PROVIDED TOOLS INFORMATION ###
+    # ##1. Tool to send an email
+    # Name: RC_message
+    # Parameters: user_id , invitation_message
+    # example usage: RC_message("@niam.lakhani", "join me for dinner at Masala 29th March 8pm?"). 
+    # Once you have all the parameters to send a message, display them to the user
+    # and respond with "RC_message(user_id, invitation_message)" with the parameters filled in 
+    # appropriately.
+    
     response = generate(
         model='4o-mini',
         system=system,
@@ -342,7 +352,7 @@ def main():
     print("Session ID:", sid)
 
     # Get response from assistant
-    response = restaurant_assistant_llm(message, sid, user)
+    response = restaurant_assistant_llm(message, user)
     return jsonify(response)
 
 
