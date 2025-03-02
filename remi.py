@@ -117,10 +117,11 @@ def restaurant_assistant_llm(message, user):
     if "now searching" in response_text.lower():
         api_results = search_restaurants(user_session)
         response_obj["text"] = api_results[0]
+        res = api_results[1]
 
         # Update user's top choice in session_dict and save to file
-        if len(api_results[1]) > 1:
-            session_dict[user]["top_choice"] = api_results[1][1]  # Store the top restaurant
+        if len(res) > 1:
+            session_dict[user]["top_choice"] = res[1]  # Store the top restaurant
         save_sessions(session_dict)  # Persist changes
 
         print("Got top choice from API:", session_dict[user]["top_choice"])
@@ -151,14 +152,14 @@ def restaurant_assistant_llm(message, user):
     
     if message == "yes_clicked":
         # invite friends
-        agent_response = agent_contact(user)
-        response_obj["text"] = agent_response
-        match_user_id = re.search(r"Friend's Rocket.Chat ID: (.+)", agent_response)
-        match_message = re.search(r"Invitation Message: (.+)", agent_response)
-        user_id = match_user_id.group(1).strip()
-        message_text = match_message.group(1).strip()
+         agent_contact(user)
+        # response_obj["text"] = agent_response
+        # match_user_id = re.search(r"Friend's Rocket.Chat ID: (.+)", agent_response)
+        # match_message = re.search(r"Invitation Message: (.+)", agent_response)
+        # user_id = match_user_id.group(1).strip()
+        # message_text = match_message.group(1).strip()
         # Send the message via Rocket.Chat
-        RC_message(user_id, message_text)
+        #RC_message(user_id, message_text)
 
         
     elif message == "no_clicked":
@@ -276,6 +277,18 @@ def agent_contact(user):
    
     agent_response = response.get('response', "⚠️ Sorry, something went wrong while generating the invitation.")
     print("Agent response:", agent_response)
+
+    if "Rocket.Chat ID:" in agent_response:
+        match_user_id = re.search(r"Friend's Rocket.Chat ID: (.+)", agent_response)
+        user_id = match_user_id.group(1).strip()
+    
+    if "Rocket.Chat ID:" in agent_response:
+        match_message = re.search(r"Invitation Message: (.+)", agent_response)
+        message_text = match_message.group(1).strip()
+
+
+    print(user_id)
+    print(message_text)
 
     return agent_response
 
