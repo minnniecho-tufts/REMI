@@ -17,6 +17,7 @@ res = []
 
 def restaurant_assistant_llm(message, sid):
     """Handles the full conversation and recommends a restaurant."""
+    global res 
     
     response = generate(
         model="4o-mini",
@@ -94,6 +95,7 @@ def restaurant_assistant_llm(message, sid):
     # Handle different scenarios and update the response text or add attachments as needed
     if "now searching" in response_text.lower():
         api_results = search_restaurants(user_session)
+        
         res, response_obj["text"] = api_results[0], api_results[1]
         print("in now searching: ", response_obj["text"])
 
@@ -154,6 +156,7 @@ def restaurant_assistant_llm(message, sid):
 
 
 def search_restaurants(user_session):
+    global res
     print('In search restaurants function')
     # """Uses Yelp API to find a restaurant based on user preferences."""
     
