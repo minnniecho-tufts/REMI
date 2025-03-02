@@ -8,7 +8,6 @@ import re
 app = Flask(__name__)
 
 # Load API Key from .env file
-# load_dotenv()
 API_KEY = os.getenv("YELP_API_KEY")   
 YELP_API_URL = "https://api.yelp.com/v3/businesses/search"
 
@@ -217,19 +216,39 @@ def agent_contact(sid, top_choice):
     print(f"Selected restaurant: {top_choice}")
 
     system = f"""
-    You are an AI assistant helping users invite friends to a restaurant reservation. The user has chosen **{top_choice}** as their restaurant.
+    You are an AI agent helping users invite friends to a restaurant reservation. 
+    The user has chosen **{top_choice}** as their restaurant.
+
+    In addition to your own intelligence, you are given access to a messaging tool.
+
+    Think step-by-step, breaking down the task into a sequence small steps.
+
+    If you can't resolve the query based on your intelligence, ask the user to execute a tool on your behalf and share the results with you.
+    If you want the user to execute a tool on your behalf, strictly only respond with the tool's name and parameters.
+    Example response for using tool: RC_message("session-id", "join me for dinner")
+
+    The name of the provided tools and their parameters are given below.
+    The output of tool execution will be shared with you so you can decide your next steps.
+
+    ### PROVIDED TOOLS INFORMATION ###
+    ##1. Tool to send an email
+    Name: RC_message
+    Parameters: user_id , invitation_message
+    example usage: RC_message("@niam.lakhani", "join me for dinner at Masala 29th March 8pm?"). 
+    Once you have all the parameters to send a message, display them to the user.
 
     GO THROUGH THESE STEPS:
-    1️⃣ **Ask the user for their friend's Rocket.Chat ID** (store it in user_id).
-    2️⃣ **Ask the user to write a short invitation message** for their friend (store it in message).
-    3️⃣ **Once both details are collected, display them in the following format:**
+    1️. Ask the user to give you a date and time they want to make a reservation at {top_choice}
+    2. **Ask the user for their friend's Rocket.Chat ID** (store it in user_id).
+    3. **Generate a for their friend (store it in message).
+    4. **Once both details are collected, display them in the following format:**
     
         ✅ **Friend's Rocket.Chat ID:** [user_id]  
         ✅ **Invitation Message:** [message]  
         
         📩 *Thank you! Now contacting your friend...*
 
-    4️⃣ **Then, send the message using the Rocket.Chat messaging tool.**
+    4️⃣ **After you have all information respond with Friend's "Rocket.Chat ID:** [user_id]\n **Invitation Message:** [message]\n" 
     """
 
     response = generate(
@@ -242,31 +261,29 @@ def agent_contact(sid, top_choice):
         rag_usage=False
     )
     
-    try:
-        agent_response = response.get('response', "⚠️ Sorry, something went wrong while generating the invitation.")
-        print("Agent response:", agent_response)
+   
+    agent_response = response.get('response', "⚠️ Sorry, something went wrong while generating the invitation.")
+    print("Agent response:", agent_response)
 
-        # Extract user ID and message
-        match_user_id = re.search(r"Friend's Rocket.Chat ID: (.+)", agent_response)
-        match_message = re.search(r"Invitation Message: (.+)", agent_response)
+    # Extract user ID and message
+    match_user_id = re.search(r"Friend's Rocket.Chat ID: (.+)", agent_response)
+    match_message = re.search(r"Invitation Message: (.+)", agent_response)
 
-        if match_user_id and match_message:
-            user_id = match_user_id.group(1).strip()
-            message_text = match_message.group(1).strip()
+    if match_user_id and match_message:
+        user_id = match_user_id.group(1).strip()
+        message_text = match_message.group(1).strip()
 
-            print(f"👤 Friend's Rocket.Chat ID: {user_id}")
-            print(f"💬 Invitation Message: {message_text}")
+        print(f"👤 Friend's Rocket.Chat ID: {user_id}")
+        print(f"💬 Invitation Message: {message_text}")
 
-            # Send the message via Rocket.Chat
-            RC_message(user_id, message_text)
+        # Send the message via Rocket.Chat
+        RC_message(user_id, message_text)
 
-            return agent_response 
+        return agent_response 
         
-        return "⚠️ Missing required information. Please try again."
+    return "⚠️ Missing required information. Please try again."
 
-    except Exception as e:
-        print(f"Error occurred while parsing agent response: {e}")
-        return "⚠️ An error occurred while processing your request."
+   
     
 
 def RC_message(user_id, message):
@@ -294,7 +311,7 @@ def RC_message(user_id, message):
 
 
 def booking():
-    return {"text": "BOOKING NOW..."}
+    return jsonify({"text": "BOOKING NOW..."})
 
 
 ### --- FLASK ROUTE TO HANDLE USER REQUESTS --- ###
