@@ -193,6 +193,8 @@ def agent_contact(sid, top_choice):
     
     return response.get("response", "⚠️ An error occurred while processing your request.")
 
+def booking():
+    return {"text": "BOOKING NOW..."}
 
 ### --- ROCKET.CHAT MESSAGE FUNCTION --- ###
 def RC_message(user_id, message):
