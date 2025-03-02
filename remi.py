@@ -120,7 +120,8 @@ def restaurant_assistant_llm(message, sid, user):
         response_obj["text"] = api_results[0]
 
         # Update user's top choice in session_dict and save to file
-        session_dict[user]["top_choice"] = api_results[1][1]  # Store the selected restaurant
+        if len(api_results[1]) > 1:
+            session_dict[user]["top_choice"] = api_results[1][1]  # Store the top restaurant
         save_sessions(session_dict)  # Persist changes
 
         print("Got top choice from API:", session_dict[user]["top_choice"])
@@ -259,7 +260,7 @@ def agent_contact(sid, top_choice):
             # Send the message via Rocket.Chat
             RC_message(user_id, message_text)
 
-            return f"✅ Invitation sent to {user_id} for a meal at {top_choice}!"
+            return agent_response 
         
         return "⚠️ Missing required information. Please try again."
 
@@ -290,6 +291,7 @@ def RC_message(user_id, message):
     # Print response status and content
     print(response.status_code)
     print(response.json())
+
 
 def booking():
     return {"text": "BOOKING NOW..."}
