@@ -91,25 +91,20 @@ def restaurant_assistant_llm(message, sid):
     }
 
     # Handle different scenarios and update the response text or add attachments as needed
+    top_choice = ""
     if "now searching" in response_text.lower():
-        response_obj["text"] = search_restaurants(user_session)
+        api_results = search_restaurants(user_session)
+        response_obj["text"], top_choice = api_results[0], api_results[1][1]
         print("in now searching: ", response_obj["text"])
-
-
-        # Note: I was trying to attach a button to the response so the user could pick which 
-        # restaurant they wanted or have the AI pick the restaurant for them, like a "Surprise me"
-        # feature, but the commented out part wasn't working. I think it would be cool if we could 
-        # get the restaurant from here using this logic and pass the restaurant info to the AI agent, 
-        # so maybe see if you can get this to work?
 
         response_obj["attachments"] = [
             {
                 "title": "User Options",
-                "text": "Do you have a top choice, or would you like us to pick?",
+                "text": "Would you like to add anyone to your reservation?",
                 "actions": [
                     {
                         "type": "button",
-                        "text": "✅ I have my top choice",
+                        "text": "✅ Add friends",
                         "msg": "yes_clicked",
                         "msg_in_chat_window": True,
                         "msg_processing_type": "sendMessage",
@@ -117,7 +112,7 @@ def restaurant_assistant_llm(message, sid):
                     },
                     {
                         "type": "button",
-                        "text": "🤔 Surprise me!",
+                        "text": "❌ No, thank you!",
                         "msg": "no_clicked",
                         "msg_in_chat_window": True,
                         "msg_processing_type": "sendMessage"
@@ -127,28 +122,20 @@ def restaurant_assistant_llm(message, sid):
         ]
     
     if message == "yes_clicked":
-        response_obj["text"] = "Great! To select a restaurant, type 'Top choice: ' followed by its number from the list. For example, if you want the first choice in the list, type 'Top choice: 1'."
+        # invite friends
+        agent_contact(sid, top_choice)
     elif message == "no_clicked":
-        our_pick = search_restaurants(user_session, -1)
-        response_obj["text"] = f"Great! Let's go with {our_pick}."
-        agent_contact(our_pick, sid)  # send the agent our restaurant choice
-    elif "top choice" in message.lower():
-        ascii_text = re.sub(r"[^\x00-\x7F]+", "", message.lower())  # Remove non-ASCII characters
-        match = re.search(r"top choice[:*\s]*(\d+)", ascii_text)  # Extract only the number
-        if match:
-            index = int(match.group(1))
-            their_pick = search_restaurants(user_session, index)
-            response_obj["text"] = f"Great choice! You've selected {their_pick}."
-            agent_contact(their_pick, sid)  # send the agent their restaurant choice
+        # send the agent our restaurant choice
+        response_obj["text"] = "Table for one it is!"
+        booking()
 
 
-    print("AFTER updated:")
     print("current details collected: ", user_session['preferences'])
 
     return response_obj
 
 
-def search_restaurants(user_session, index=0):
+def search_restaurants(user_session):
     print('In search restaurants function')
     # """Uses Yelp API to find a restaurant based on user preferences."""
     
@@ -167,13 +154,13 @@ def search_restaurants(user_session, index=0):
         "location": location,
         "price": budget,  # Yelp API uses 1 (cheap) to 4 (expensive)
         "radius": radius,
-        "limit": 5,  # Fetch top five restaurants
+        "limit": 1,  # top
         "sort_by": "best_match"
     }
 
     response = requests.get(YELP_API_URL, headers=headers, params=params)
 
-    res = [f"Here are some budget-friendly suggestions we found for {cuisine} cuisine within a {round(float(radius) * 0.000621371)}-mile radius of {location}!\n"]
+    res = [f"Here is a budget-friendly suggestion we found for {cuisine} cuisine within a {round(float(radius) * 0.000621371)}-mile radius of {location}!\n"]
     if response.status_code == 200:
         data = response.json()
         if "businesses" in data and data["businesses"]:
@@ -185,13 +172,13 @@ def search_restaurants(user_session, index=0):
                 print(f"🍽️ Found **{name}** ({rating}⭐) in {address}")
                 res.append(f"{i+1}. **{name}** ({rating}⭐) in {address}\n")
 
-            if index > 0 and index < len(res):  # return a specific restaurant in the result list
-                return res[index]
-            elif index == -1:                   # return a random restaurant in the list
-                import random
-                return res[random.randint(1, len(res))]
+            # if index > 0 and index < len(res):  # return a specific restaurant in the result list
+            #     return res[index]
+            # elif index == -1:                   # return a random restaurant in the list
+            #     import random
+            #     return res[random.randint(1, len(res))]
             
-            return "".join(res)
+            return ["".join(res), res]
         else:
             return "⚠️ Sorry, I couldn't find any matching restaurants. Try adjusting your preferences!"
     
@@ -201,45 +188,72 @@ def search_restaurants(user_session, index=0):
 # COPIED FROM example_agent_tool
 # TODO: update system instructions to instruct agent to only contact friends when the user has
 # provided the rocket chat IDs of their friends
-def agent_contact(message, sid):
+def agent_contact(sid, top_choice):
     print("in the agent!")
+    print(f"Selected restaurant: {top_choice}")
 
-    system = """
-    You are an AI agent designed contact the main users friend when they give their rocket chat ID of their friend. 
-    In addition to your own intelligence, you are given access to a set of tools.
-    Think step-by-step, breaking down the task into a sequence small steps.
-
-    The name of the provided tools and their parameters are given below.
-    The output of tool execution will be shared with you so you can decide your next steps.
+    system = f"""
+    You are an AI assistant helping users invite friends to a restaurant reservation. The user has chosen **{top_choice}** as their restaurant.
 
     GO THROUGH THESE STEPS IN ORDER:
-    - FIRST: ask the user to enter their friends rocket chat ID store that in variable user_id
-    - SECOND : Generate an invitation message to send to the friend for the meal store in variable  message
-    - THIRD: Use the RC_message tool to send a message.
+    1️⃣ **Ask the user for the date and time of the reservation** (store it in `res_time`).
+    2️⃣ **Ask the user for their friend's Rocket.Chat ID** (store it in `user_id`).
+    3️⃣ **Generate a friendly invitation message** that includes the restaurant name **{top_choice}** (store it in `message`).
+    4️⃣ **Once all three details are collected, display them to the user** in the following format:
+    
+        ✅ **Reservation Time:** [res_time]  
+        ✅ **Friend's Rocket.Chat ID:** [user_id]  
+        ✅ **Invitation Message:** [message]  
+        
+        📩 *Thank you! Now contacting your friend...*
 
-    ### PROVIDED TOOLS INFORMATION ###
-    ##1. Tool to send an email
-    Name: RC_message
-    Parameters: user_id , message 
-    example usage: RC_message(user_id, message)
-    
-    
+    5️⃣ **Then, send the message using the Rocket.Chat messaging tool.**
+
+    ### PROVIDED TOOL INFORMATION ###
+    **Tool to send a message:**
+    - **Name:** RC_message
+    - **Parameters:** user_id (friend's Rocket.Chat ID), message (invitation text)
+    - **Example Usage:** `RC_message(user_id, message)`
     """
 
-    response = generate(model = '4o-mini',
-        system = system,
-        query = message,
+    response = generate(
+        model='4o-mini',
+        system=system,
+        query=f"The user has chosen {top_choice}. Start the process.",
         temperature=0.7,
         lastk=10,
         session_id=sid,
-        rag_usage = False)
+        rag_usage=False
+    )
     
     try:
-        return response['response']
+        agent_response = response.get('response', "⚠️ Sorry, something went wrong while generating the invitation.")
+        print("Agent response:", agent_response)
+
+        # Extract reservation time, friend ID, and message
+        match_res_time = re.search(r"Reservation Time: (.+)", agent_response)
+        match_user_id = re.search(r"Friend's Rocket.Chat ID: (.+)", agent_response)
+        match_message = re.search(r"Invitation Message: (.+)", agent_response)
+
+        if match_res_time and match_user_id and match_message:
+            res_time = match_res_time.group(1).strip()
+            user_id = match_user_id.group(1).strip()
+            message_text = match_message.group(1).strip()
+
+            print(f"📅 Reservation Time: {res_time}")
+            print(f"👤 Friend's Rocket.Chat ID: {user_id}")
+            print(f"💬 Invitation Message: {message_text}")
+
+            # Send the message via Rocket.Chat
+            RC_message(user_id, message_text)
+
+            return f"✅ Invitation sent to {user_id} for a reservation at {top_choice} on {res_time}!"
+        
+        return "⚠️ Missing required information. Please try again."
+
     except Exception as e:
-        print(f"Error occured with parsing output: {response}")
-        raise e
-    return 
+        print(f"Error occurred while parsing agent response: {e}")
+        return "⚠️ An error occurred while processing your request."
     
 
 def RC_message(user_id, message):
@@ -264,6 +278,9 @@ def RC_message(user_id, message):
     # Print response status and content
     print(response.status_code)
     print(response.json())
+
+def booking():
+    print("BOOKING NOW...")
 
 @app.route('/query', methods=['POST'])
 def main():
