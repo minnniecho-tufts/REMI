@@ -91,8 +91,10 @@ def restaurant_assistant_llm(message, sid):
     }
 
     # Handle different scenarios and update the response text or add attachments as needed
+    res = []
     if "now searching" in response_text.lower():
-        response_obj["text"] = search_restaurants(user_session)
+        api_results = search_restaurants(user_session)
+        res, response_obj["text"] = api_results[0], api_results[1]
         print("in now searching: ", response_obj["text"])
 
 
@@ -130,17 +132,18 @@ def restaurant_assistant_llm(message, sid):
         print("user clicked yes:", message)
         response_obj["text"] = "Great! To select a restaurant, type 'Top choice: ' followed by its number from the list. For example, if you want the first choice in the list, type 'Top choice: 1'."
     elif message == "no_clicked":
-        our_pick = search_restaurants(user_session, -1)
+        import random
+        our_pick = res[random.randint(1, len(res))]
         response_obj["text"] = f"Great! Let's go with {our_pick}."
     #     agent_contact(our_pick, sid)  # send the agent our restaurant choice
-    # elif "top choice" in message.lower():
-    #     ascii_text = re.sub(r"[^\x00-\x7F]+", "", message.lower())  # Remove non-ASCII characters
-    #     match = re.search(r"top choice[:*\s]*(\d+)", ascii_text)  # Extract only the number
-    #     if match:
-    #         index = int(match.group(1))
-    #         their_pick = search_restaurants(user_session, index)
-    #         response_obj["text"] = f"Great choice! You've selected {their_pick}."
-    #         agent_contact(their_pick, sid)  # send the agent their restaurant choice
+    elif "top choice" in message.lower():
+        ascii_text = re.sub(r"[^\x00-\x7F]+", "", message.lower())  # Remove non-ASCII characters
+        match = re.search(r"top choice[:*\s]*(\d+)", ascii_text)  # Extract only the number
+        if match:
+            index = int(match.group(1))
+            their_pick = res[index]
+            response_obj["text"] = f"Great choice! You've selected {their_pick}."
+            # agent_contact(their_pick, sid)  # send the agent their restaurant choice
 
 
     print("AFTER updated:")
@@ -149,7 +152,7 @@ def restaurant_assistant_llm(message, sid):
     return response_obj
 
 
-def search_restaurants(user_session, index=0):
+def search_restaurants(user_session):
     print('In search restaurants function')
     # """Uses Yelp API to find a restaurant based on user preferences."""
     
@@ -185,14 +188,8 @@ def search_restaurants(user_session, index=0):
                 rating = restaurant["rating"]
                 print(f"🍽️ Found **{name}** ({rating}⭐) in {address}")
                 res.append(f"{i+1}. **{name}** ({rating}⭐) in {address}\n")
-
-            if index > 0 and index < len(res):  # return a specific restaurant in the result list
-                return res[index]
-            elif index == -1:                   # return a random restaurant in the list
-                import random
-                return res[random.randint(1, len(res))]
             
-            return "".join(res)
+            return [res, "".join(res)]
         else:
             return "⚠️ Sorry, I couldn't find any matching restaurants. Try adjusting your preferences!"
     
