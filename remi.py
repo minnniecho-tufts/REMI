@@ -12,6 +12,7 @@ app = Flask(__name__)
 API_KEY = os.getenv("YELP_API_KEY")   
 YELP_API_URL = "https://api.yelp.com/v3/businesses/search"
 session_dict = {}
+res = []
 
 
 def restaurant_assistant_llm(message, sid):
@@ -91,7 +92,6 @@ def restaurant_assistant_llm(message, sid):
     }
 
     # Handle different scenarios and update the response text or add attachments as needed
-    res = []
     if "now searching" in response_text.lower():
         api_results = search_restaurants(user_session)
         res, response_obj["text"] = api_results[0], api_results[1]
@@ -137,6 +137,7 @@ def restaurant_assistant_llm(message, sid):
         response_obj["text"] = f"Great! Let's go with {our_pick}."
     #     agent_contact(our_pick, sid)  # send the agent our restaurant choice
     elif "top choice" in message.lower():
+        print("user entered top choice")
         ascii_text = re.sub(r"[^\x00-\x7F]+", "", message.lower())  # Remove non-ASCII characters
         match = re.search(r"top choice[:*\s]*(\d+)", ascii_text)  # Extract only the number
         if match:
