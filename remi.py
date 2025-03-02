@@ -281,15 +281,13 @@ def agent_contact(user):
     if "Rocket.Chat ID:" in agent_response:
         match_user_id = re.search(r"Friend's Rocket.Chat ID: (.+)", agent_response)
         user_id = match_user_id.group(1).strip()
+        print(user_id)
     
     if "Rocket.Chat ID:" in agent_response:
         match_message = re.search(r"Invitation Message: (.+)", agent_response)
         message_text = match_message.group(1).strip()
-
-
-    print(user_id)
-    print(message_text)
-
+        print(message_text)
+        
     return agent_response
 
     # Extract user ID and message
