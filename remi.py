@@ -152,6 +152,7 @@ def restaurant_assistant_llm(message, sid, user):
     if message == "yes_clicked":
         # invite friends
         agent_response = agent_contact(sid, session_dict[user]["top_choice"])
+         
         response_obj["text"] = agent_response
     elif message == "no_clicked":
         # send the agent our restaurant choice
@@ -235,21 +236,22 @@ def agent_contact(sid, top_choice):
     Name: RC_message
     Parameters: user_id , invitation_message
     example usage: RC_message("@niam.lakhani", "join me for dinner at Masala 29th March 8pm?"). 
-    Once you have all the parameters to send a message, display them to the user.
+    Once you have all the parameters to send a message, display them to the user
+    and respond with "RC_message(user_id, invitation_message)" with the parameters filled in 
+    appropriately."""
 
-    GO THROUGH THESE STEPS:
-    1️. Ask the user to give you a date and time they want to make a reservation at {top_choice}
-    2. **Ask the user for their friend's Rocket.Chat ID** (store it in user_id).
-    3. **Generate a for their friend (store it in message).
-    4. **Once both details are collected, display them in the following format:**
+    # GO THROUGH THESE STEPS:
+    # 1️. Ask the user to give you a date and time they want to make a reservation at {top_choice}
+    # 2. **Ask the user for their friend's Rocket.Chat ID** (store it in user_id).
+    # 3. **Generate a for their friend (store it in message).
+    # 4. **Once both details are collected, display them in the following format:**
     
-        ✅ **Friend's Rocket.Chat ID:** [user_id]  
-        ✅ **Invitation Message:** [message]  
+    #     ✅ **Friend's Rocket.Chat ID:** [user_id]  
+    #     ✅ **Invitation Message:** [message]  
         
-        📩 *Thank you! Now contacting your friend...*
+    #     📩 *Thank you! Now contacting your friend...*
 
-    4️⃣ **After you have all information respond with Friend's "Rocket.Chat ID:** [user_id]\n **Invitation Message:** [message]\n" 
-    """
+    # 4️⃣ **After you have all information respond with Friend's "Rocket.Chat ID:** [user_id]\n **Invitation Message:** [message]\n" 
 
     response = generate(
         model='4o-mini',
@@ -265,23 +267,26 @@ def agent_contact(sid, top_choice):
     agent_response = response.get('response', "⚠️ Sorry, something went wrong while generating the invitation.")
     print("Agent response:", agent_response)
 
+    return agent_response
+
     # Extract user ID and message
-    match_user_id = re.search(r"Friend's Rocket.Chat ID: (.+)", agent_response)
-    match_message = re.search(r"Invitation Message: (.+)", agent_response)
+    # match_user_id = re.search(r"Friend's Rocket.Chat ID: (.+)", agent_response)
+    # match_message = re.search(r"Invitation Message: (.+)", agent_response)
 
-    if match_user_id and match_message:
-        user_id = match_user_id.group(1).strip()
-        message_text = match_message.group(1).strip()
+    
+    # print(f"👤 Friend's Rocket.Chat ID: {user_id}")
+    # print(f"💬 Invitation Message: {message_text}")
+    
+    # if match_user_id and match_message:
+    #     user_id = match_user_id.group(1).strip()
+    #     message_text = match_message.group(1).strip()
 
-        print(f"👤 Friend's Rocket.Chat ID: {user_id}")
-        print(f"💬 Invitation Message: {message_text}")
+    #     # Send the message via Rocket.Chat
+    #     RC_message(user_id, message_text)
 
-        # Send the message via Rocket.Chat
-        RC_message(user_id, message_text)
-
-        return agent_response 
+    #     return agent_response 
         
-    return "⚠️ Missing required information. Please try again."
+    # return "⚠️ Missing required information. Please try again."
 
    
     
