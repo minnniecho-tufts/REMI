@@ -43,7 +43,7 @@ def restaurant_assistant_llm(message, sid):
 
         query=message,
         temperature=0.7,
-        lastk=5,
+        lastk=20,
         session_id=sid,
         rag_usage=False
     )
@@ -126,7 +126,8 @@ def restaurant_assistant_llm(message, sid):
             }
         ]
     
-    # if message == "yes_clicked":
+    if message == "yes_clicked":
+        print("user clicked yes:", message)
     #     response_obj["text"] = "Great! To select a restaurant, type 'Top choice: ' followed by its number from the list. For example, if you want the first choice in the list, type 'Top choice: 1'."
     # elif message == "no_clicked":
     #     our_pick = search_restaurants(user_session, -1)
