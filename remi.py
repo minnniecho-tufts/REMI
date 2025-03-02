@@ -14,9 +14,10 @@ YELP_API_URL = "https://api.yelp.com/v3/businesses/search"
 session_dict = {}
 res = []
 
-
+# 
+# """Handles the full conversation and recommends a restaurant."""
+# 
 def restaurant_assistant_llm(message, sid):
-    """Handles the full conversation and recommends a restaurant."""
     global res 
     
     response = generate(
@@ -97,7 +98,7 @@ def restaurant_assistant_llm(message, sid):
         api_results = search_restaurants(user_session)
         
         res, response_obj["text"] = api_results[0], api_results[1]
-        print("in now searching: ", response_obj["text"])
+        print("got the following restaurants: ", res[1:])
 
 
         # Note: I was trying to attach a button to the response so the user could pick which 
@@ -133,19 +134,19 @@ def restaurant_assistant_llm(message, sid):
     if message == "yes_clicked":
         print("user clicked yes:", message)
         response_obj["text"] = "Great! To select a restaurant, type 'Top choice: ' followed by its number from the list. For example, if you want the first choice in the list, type 'Top choice: 1'."
-    elif message == "no_clicked":
-        import random
-        our_pick = res[random.randint(1, len(res))]
-        response_obj["text"] = f"Great! Let's go with {our_pick}."
-    #     agent_contact(our_pick, sid)  # send the agent our restaurant choice
-    elif "top choice" in message.lower():
-        print("user entered top choice")
-        ascii_text = re.sub(r"[^\x00-\x7F]+", "", message.lower())  # Remove non-ASCII characters
-        match = re.search(r"top choice[:*\s]*(\d+)", ascii_text)  # Extract only the number
-        if match:
-            index = int(match.group(1))
-            their_pick = res[index]
-            response_obj["text"] = f"Great choice! You've selected {their_pick}."
+    # elif message == "no_clicked":
+    #     import random
+    #     our_pick = res[random.randint(1, len(res))]
+    #     response_obj["text"] = f"Great! Let's go with {our_pick}."
+    # #     agent_contact(our_pick, sid)  # send the agent our restaurant choice
+    # elif "top choice" in message.lower():
+    #     print("user entered top choice")
+    #     ascii_text = re.sub(r"[^\x00-\x7F]+", "", message.lower())  # Remove non-ASCII characters
+    #     match = re.search(r"top choice[:*\s]*(\d+)", ascii_text)  # Extract only the number
+    #     if match:
+    #         index = int(match.group(1))
+    #         their_pick = res[index]
+    #         response_obj["text"] = f"Great choice! You've selected {their_pick}."
             # agent_contact(their_pick, sid)  # send the agent their restaurant choice
 
 
@@ -155,10 +156,12 @@ def restaurant_assistant_llm(message, sid):
     return response_obj
 
 
+# search_restaurants
+# """Uses Yelp API to find a restaurant based on user preferences."""
+#
 def search_restaurants(user_session):
     global res
     print('In search restaurants function')
-    # """Uses Yelp API to find a restaurant based on user preferences."""
     
     cuisine = user_session["preferences"]["cuisine"]
     budget = user_session["preferences"]["budget"]
