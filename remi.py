@@ -12,13 +12,10 @@ app = Flask(__name__)
 API_KEY = os.getenv("YELP_API_KEY")   
 YELP_API_URL = "https://api.yelp.com/v3/businesses/search"
 session_dict = {}
-res = []
 
-# 
-# """Handles the full conversation and recommends a restaurant."""
-# 
+
 def restaurant_assistant_llm(message, sid):
-    global res 
+    """Handles the full conversation and recommends a restaurant."""
     
     response = generate(
         model="4o-mini",
@@ -46,7 +43,7 @@ def restaurant_assistant_llm(message, sid):
 
         query=message,
         temperature=0.7,
-        lastk=10,
+        lastk=5,
         session_id=sid,
         rag_usage=False
     )
@@ -95,10 +92,8 @@ def restaurant_assistant_llm(message, sid):
 
     # Handle different scenarios and update the response text or add attachments as needed
     if "now searching" in response_text.lower():
-        api_results = search_restaurants(user_session)
-        
-        res, response_obj["text"] = api_results[0], api_results[1]
-        print("got the following restaurants: ", res[1:])
+        response_obj["text"] = search_restaurants(user_session)
+        print("in now searching: ", response_obj["text"])
 
 
         # Note: I was trying to attach a button to the response so the user could pick which 
@@ -132,22 +127,19 @@ def restaurant_assistant_llm(message, sid):
         ]
     
     if message == "yes_clicked":
-        print("user clicked yes:", message)
         response_obj["text"] = "Great! To select a restaurant, type 'Top choice: ' followed by its number from the list. For example, if you want the first choice in the list, type 'Top choice: 1'."
-    # elif message == "no_clicked":
-    #     import random
-    #     our_pick = res[random.randint(1, len(res))]
-    #     response_obj["text"] = f"Great! Let's go with {our_pick}."
-    # #     agent_contact(our_pick, sid)  # send the agent our restaurant choice
-    # elif "top choice" in message.lower():
-    #     print("user entered top choice")
-    #     ascii_text = re.sub(r"[^\x00-\x7F]+", "", message.lower())  # Remove non-ASCII characters
-    #     match = re.search(r"top choice[:*\s]*(\d+)", ascii_text)  # Extract only the number
-    #     if match:
-    #         index = int(match.group(1))
-    #         their_pick = res[index]
-    #         response_obj["text"] = f"Great choice! You've selected {their_pick}."
-            # agent_contact(their_pick, sid)  # send the agent their restaurant choice
+    elif message == "no_clicked":
+        our_pick = search_restaurants(user_session, -1)
+        response_obj["text"] = f"Great! Let's go with {our_pick}."
+        agent_contact(our_pick, sid)  # send the agent our restaurant choice
+    elif "top choice" in message.lower():
+        ascii_text = re.sub(r"[^\x00-\x7F]+", "", message.lower())  # Remove non-ASCII characters
+        match = re.search(r"top choice[:*\s]*(\d+)", ascii_text)  # Extract only the number
+        if match:
+            index = int(match.group(1))
+            their_pick = search_restaurants(user_session, index)
+            response_obj["text"] = f"Great choice! You've selected {their_pick}."
+            agent_contact(their_pick, sid)  # send the agent their restaurant choice
 
 
     print("AFTER updated:")
@@ -156,12 +148,9 @@ def restaurant_assistant_llm(message, sid):
     return response_obj
 
 
-# search_restaurants
-# """Uses Yelp API to find a restaurant based on user preferences."""
-#
-def search_restaurants(user_session):
-    global res
+def search_restaurants(user_session, index=0):
     print('In search restaurants function')
+    # """Uses Yelp API to find a restaurant based on user preferences."""
     
     cuisine = user_session["preferences"]["cuisine"]
     budget = user_session["preferences"]["budget"]
@@ -195,8 +184,14 @@ def search_restaurants(user_session):
                 rating = restaurant["rating"]
                 print(f"🍽️ Found **{name}** ({rating}⭐) in {address}")
                 res.append(f"{i+1}. **{name}** ({rating}⭐) in {address}\n")
+
+            if index > 0 and index < len(res):  # return a specific restaurant in the result list
+                return res[index]
+            elif index == -1:                   # return a random restaurant in the list
+                import random
+                return res[random.randint(1, len(res))]
             
-            return [res, "".join(res)]
+            return "".join(res)
         else:
             return "⚠️ Sorry, I couldn't find any matching restaurants. Try adjusting your preferences!"
     
@@ -210,7 +205,7 @@ def agent_contact(message, sid):
     print("in the agent!")
 
     system = """
-    You are an AI agent designed contact the main user's friend when they give their rocket chat ID of their friend. 
+    You are an AI agent designed contact the main users friend when they give their rocket chat ID of their friend. 
     In addition to your own intelligence, you are given access to a set of tools.
     Think step-by-step, breaking down the task into a sequence small steps.
 
@@ -218,8 +213,8 @@ def agent_contact(message, sid):
     The output of tool execution will be shared with you so you can decide your next steps.
 
     GO THROUGH THESE STEPS IN ORDER:
-    - FIRST: ask the user to enter their friends rocket chat ID stored in variable user_id
-    - SECOND: Generate an invitation message to send to the friend for the meal stored in variable message
+    - FIRST: ask the user to enter their friends rocket chat ID store that in variable user_id
+    - SECOND : Generate an invitation message to send to the friend for the meal store in variable  message
     - THIRD: Use the RC_message tool to send a message.
 
     ### PROVIDED TOOLS INFORMATION ###
@@ -280,8 +275,8 @@ def main():
     print("current session dict", session_dict)
     print("current user", user)
 
-    if user not in session_dict:
-        print("new user, ", user)
+    if user not in session_dict: 
+        print("new user, ", user) 
         # Single user session
         session_dict[user] = (f"{user}-session")
     sid = session_dict[user]
