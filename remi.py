@@ -46,7 +46,7 @@ def restaurant_assistant_llm(message, sid):
 
         query=message,
         temperature=0.7,
-        lastk=20,
+        lastk=10,
         session_id=sid,
         rag_usage=False
     )
