@@ -7,12 +7,14 @@ import re
 
 app = Flask(__name__)
 
-# Yelp API Config
-API_KEY = os.getenv("YELP_API_KEY")
+# Load API Key from .env file
+# load_dotenv()
+API_KEY = os.getenv("YELP_API_KEY")   
 YELP_API_URL = "https://api.yelp.com/v3/businesses/search"
 
 # JSON file to store user sessions
 SESSION_FILE = "session_store.json"
+
 
 ### --- SESSION MANAGEMENT FUNCTIONS --- ###
 def load_sessions():
@@ -29,6 +31,7 @@ def save_sessions(session_dict):
     """Save sessions to a JSON file."""
     with open(SESSION_FILE, "w") as file:
         json.dump(session_dict, file, indent=4)
+
 
 # Load sessions when the app starts
 session_dict = load_sessions()
@@ -50,31 +53,70 @@ def restaurant_assistant_llm(message, sid, user):
             
             - FIRST: Ask the user for their **cuisine preference** in a natural way.
             - SECOND: Ask the user for their **budget** in a natural way.
-            - THIRD: Ask the user for their **location**.
-            - FOURTH: Ask the user what their preferred search radius is (max 20 miles).
-            - Make it **fun** and use **emojis**!
-            - Confirm collected info with:
-              ```
-              Cuisine: [cuisine]
-              Location: [location]
-              Budget: [budget (1-4)]
-              Search Radius: [radius in meters]
-              ```
-              Then say, "Thank you! Now searching..."
+               - Store the **budget as a number (1-4)** according to this scale:  
+              "cheap": "1", "mid-range": "2", "expensive": "3", "fine dining": "4"
+            - THIRD:  Ask the user for their **location** in a natural way (acceptable inputs include city, state, and zip code).
+            - FOURTH: Ask the user what their preferred search radius is. The search radius cannot be greater than 20 miles.
+            - Put a lot of **emojis** and be **fun and quirky**.
+            - Ask the user for the **occasion** to make it more engaging.
+            - At the end, after the user has provided all four parameters of cuisine, budget, location, AND search radius, 
+            respond with the following in a bulleted list format:
+                "Cuisine noted: [cuisine]\nLocation noted: [location]\nBudget noted: [budget (1-4)]\nSearch radius noted: [radius (in meters)]"
+            and then say, "Thank you! Now searching..."
         """,
+
         query=message,
         temperature=0.7,
         lastk=5,
         session_id=sid,
         rag_usage=False
     )
-
     response_text = response.get("response", "⚠️ Sorry, I couldn't process that. Could you rephrase?").strip()
 
-    response_obj = {"text": response_text}
+    # Initialize an object for user preferences
+    user_session = {
+            "state": "conversation",
+            "preferences": {"cuisine": None, "budget": None, "location": None, "radius": None}
+    }
+    
+    # Extract information from LLM response
+    if "Cuisine noted:" in response_text:
+        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
+        match = re.search(r"Cuisine noted[:*\s]*(\S.*)", ascii_text)  # Capture actual text after "*Cuisine noted:*"
+        if match:
+            user_session["preferences"]["cuisine"] = match.group(1).strip()  # Remove extra spaces
 
+    if "Budget noted:" in response_text:
+        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
+        match = re.search(r"Budget noted[:*\s]*(\d+)", ascii_text)  # Extract only the number
+        if match:
+            user_session["preferences"]["budget"] = match.group(1)  # Store as string (convert if needed)
+        else:
+            user_session["preferences"]["budget"] = None  # Handle cases where no number is found
+    
+    if "Location noted:" in response_text:
+        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
+        match = re.search(r"Location noted[:*\s]*(\S.*)", ascii_text)  # Capture actual text after "*Location noted:*"
+        if match:
+            user_session["preferences"]["location"] = match.group(1).strip()  # Remove extra spaces
+    
+    if "Search radius noted:" in response_text:
+        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
+        match = re.search(r"Search radius noted[:*\s]*(\d+)", ascii_text)  # Extract only the number
+        if match:
+            metric_radius = round(int(match.group(1)) * 1609.34)
+            user_session["preferences"]["radius"] = str(metric_radius)  # Store as string (convert if needed)
+        else:
+            user_session["preferences"]["radius"] = None  # Handle cases where no number is found
+
+    # Create the response object with the basic text
+    response_obj = {
+        "text": response_text
+    }
+
+    # Handle different scenarios and update the response text or add attachments as needed
     if "now searching" in response_text.lower():
-        api_results = search_restaurants(user)
+        api_results = search_restaurants(user_session)
         response_obj["text"] = api_results[0]
 
         # Update user's top choice in session_dict and save to file
@@ -108,27 +150,28 @@ def restaurant_assistant_llm(message, sid, user):
         ]
     
     if message == "yes_clicked":
-        # Invite friends using the stored top_choice
+        # invite friends
         agent_response = agent_contact(sid, session_dict[user]["top_choice"])
         response_obj["text"] = agent_response
     elif message == "no_clicked":
-        # Proceed with booking the stored top_choice
+        # send the agent our restaurant choice
         response_obj["text"] = "Table for one it is!"
         booking()
+
+
+    print("current details collected: ", user_session['preferences'])
 
     return response_obj
 
 
-### --- YELP API SEARCH FUNCTION --- ###
-def search_restaurants(user):
-    """Uses Yelp API to find a restaurant based on stored user preferences."""
+def search_restaurants(user_session):
     print('In search restaurants function')
-
-    user_session = session_dict[user]  # Retrieve user's stored preferences
-    cuisine = user_session.get("cuisine", "")
-    budget = user_session.get("budget", "")
-    location = user_session.get("location", "")
-    radius = user_session.get("radius", "")
+    # """Uses Yelp API to find a restaurant based on user preferences."""
+    
+    cuisine = user_session["preferences"]["cuisine"]
+    budget = user_session["preferences"]["budget"]
+    location = user_session["preferences"]["location"]
+    radius = user_session["preferences"]["radius"]
 
     headers = {
         "Authorization": f"Bearer {API_KEY}",
@@ -138,39 +181,46 @@ def search_restaurants(user):
     params = {
         "term": cuisine,
         "location": location,
-        "price": budget,  
+        "price": budget,  # Yelp API uses 1 (cheap) to 4 (expensive)
         "radius": radius,
-        "limit": 1,  # Get only the top result
+        "limit": 1,  # top
         "sort_by": "best_match"
     }
 
     response = requests.get(YELP_API_URL, headers=headers, params=params)
 
+    res = [f"Here is a budget-friendly suggestion we found for {cuisine} cuisine within a {round(float(radius) * 0.000621371)}-mile radius of {location}!\n"]
     if response.status_code == 200:
         data = response.json()
         if "businesses" in data and data["businesses"]:
-            restaurant = data["businesses"][0]
-            name = restaurant["name"]
-            address = ", ".join(restaurant["location"]["display_address"])
-            rating = restaurant["rating"]
-
-            result_text = f"🍽️ **{name}** ({rating}⭐) at {address}."
-            print(f"Found restaurant: {result_text}")
-            return [result_text, ["", result_text]]  # Second element for top choice update
+            for i in range(len(data["businesses"])):
+                restaurant = data["businesses"][i]
+                name = restaurant["name"]
+                address = ", ".join(restaurant["location"]["display_address"])
+                rating = restaurant["rating"]
+                print(f"🍽️ Found **{name}** ({rating}⭐) in {address}")
+                res.append(f"{i+1}. **{name}** ({rating}⭐) in {address}\n")
+            
+            return ["".join(res), res]
+        else:
+            return "⚠️ Sorry, I couldn't find any matching restaurants. Try adjusting your preferences!"
     
-    return ["⚠️ Sorry, I couldn't find any matching restaurants. Try adjusting your preferences!", ["", ""]]
+    return f"⚠️ Yelp API request failed. Error {response.status_code}: {response.text}"
 
 
-### --- AGENT CONTACT FUNCTION --- ###
+# COPIED FROM example_agent_tool
+# TODO: update system instructions to instruct agent to only contact friends when the user has
+# provided the rocket chat IDs of their friends
 def agent_contact(sid, top_choice):
+    print("in the agent!")
     print(f"Selected restaurant: {top_choice}")
 
     system = f"""
-    You are an AI assistant helping users invite friends to a restaurant reservation. The user has chosen **{top_choice}**.
+    You are an AI assistant helping users invite friends to a restaurant reservation. The user has chosen **{top_choice}** as their restaurant.
 
     GO THROUGH THESE STEPS:
-    1️⃣ **Ask the user for their friend's Rocket.Chat ID** (store it in `user_id`).
-    2️⃣ **Ask the user to write a short invitation message** for their friend (store it in `message`).
+    1️⃣ **Ask the user for their friend's Rocket.Chat ID** (store it in user_id).
+    2️⃣ **Ask the user to write a short invitation message** for their friend (store it in message).
     3️⃣ **Once both details are collected, display them in the following format:**
     
         ✅ **Friend's Rocket.Chat ID:** [user_id]  
@@ -191,45 +241,83 @@ def agent_contact(sid, top_choice):
         rag_usage=False
     )
     
-    return response.get("response", "⚠️ An error occurred while processing your request.")
+    try:
+        agent_response = response.get('response', "⚠️ Sorry, something went wrong while generating the invitation.")
+        print("Agent response:", agent_response)
 
-def booking():
-    return {"text": "BOOKING NOW..."}
+        # Extract user ID and message
+        match_user_id = re.search(r"Friend's Rocket.Chat ID: (.+)", agent_response)
+        match_message = re.search(r"Invitation Message: (.+)", agent_response)
 
-### --- ROCKET.CHAT MESSAGE FUNCTION --- ###
+        if match_user_id and match_message:
+            user_id = match_user_id.group(1).strip()
+            message_text = match_message.group(1).strip()
+
+            print(f"👤 Friend's Rocket.Chat ID: {user_id}")
+            print(f"💬 Invitation Message: {message_text}")
+
+            # Send the message via Rocket.Chat
+            RC_message(user_id, message_text)
+
+            return f"✅ Invitation sent to {user_id} for a meal at {top_choice}!"
+        
+        return "⚠️ Missing required information. Please try again."
+
+    except Exception as e:
+        print(f"Error occurred while parsing agent response: {e}")
+        return "⚠️ An error occurred while processing your request."
+    
+
 def RC_message(user_id, message):
-    url = "https://chat.genaiconnect.net/api/v1/chat.postMessage"
+    url = "https://chat.genaiconnect.net/api/v1/chat.postMessage" #URL of RocketChat server, keep the same
 
+# Headers with authentication tokens
     headers = {
         "Content-Type": "application/json",
         "X-Auth-Token": "NwEWNpYAyj0VjnGIWDqzLG_8JGUN4l2J3-4mQaZm_pF",
         "X-User-Id": "vuWQsF6j36wS6qxmf"
     }
 
+    # Payload (data to be sent)
     payload = {
-        "channel": user_id,
-        "text": message
+        "channel": user_id, #Change this to your desired user, for any user it should start with @ then the username
+        "text": message #This where you add your message to the user
     }
 
+    # Sending the POST request
     response = requests.post(url, json=payload, headers=headers)
-    print(response.status_code, response.json())
+
+    # Print response status and content
+    print(response.status_code)
+    print(response.json())
+
+def booking():
+    return {"text": "BOOKING NOW..."}
 
 
 ### --- FLASK ROUTE TO HANDLE USER REQUESTS --- ###
 @app.route('/query', methods=['POST'])
 def main():
+    """Handles user messages and manages session storage."""
     global session_dict
 
     data = request.get_json()
     message = data.get("text", "").strip()
     user = data.get("user_name", "Unknown")
 
+    print("Current session dict:", session_dict)
+    print("Current user:", user)
+
+    # Load user session if it exists, otherwise create a new one
     if user not in session_dict:
+        print("new user", user)
         session_dict[user] = {"session_id": f"{user}-session", "top_choice": ""}
         save_sessions(session_dict)
 
     sid = session_dict[user]["session_id"]
+    print("Session ID:", sid)
 
+    # Get response from assistant
     response = restaurant_assistant_llm(message, sid, user)
     return jsonify(response)
 
