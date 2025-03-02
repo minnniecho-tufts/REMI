@@ -128,10 +128,10 @@ def restaurant_assistant_llm(message, sid):
     
     if message == "yes_clicked":
         print("user clicked yes:", message)
-    #     response_obj["text"] = "Great! To select a restaurant, type 'Top choice: ' followed by its number from the list. For example, if you want the first choice in the list, type 'Top choice: 1'."
-    # elif message == "no_clicked":
-    #     our_pick = search_restaurants(user_session, -1)
-    #     response_obj["text"] = f"Great! Let's go with {our_pick}."
+        response_obj["text"] = "Great! To select a restaurant, type 'Top choice: ' followed by its number from the list. For example, if you want the first choice in the list, type 'Top choice: 1'."
+    elif message == "no_clicked":
+        our_pick = search_restaurants(user_session, -1)
+        response_obj["text"] = f"Great! Let's go with {our_pick}."
     #     agent_contact(our_pick, sid)  # send the agent our restaurant choice
     # elif "top choice" in message.lower():
     #     ascii_text = re.sub(r"[^\x00-\x7F]+", "", message.lower())  # Remove non-ASCII characters
@@ -206,7 +206,7 @@ def agent_contact(message, sid):
     print("in the agent!")
 
     system = """
-    You are an AI agent designed contact the main users friend when they give their rocket chat ID of their friend. 
+    You are an AI agent designed contact the main user's friend when they give their rocket chat ID of their friend. 
     In addition to your own intelligence, you are given access to a set of tools.
     Think step-by-step, breaking down the task into a sequence small steps.
 
@@ -214,8 +214,8 @@ def agent_contact(message, sid):
     The output of tool execution will be shared with you so you can decide your next steps.
 
     GO THROUGH THESE STEPS IN ORDER:
-    - FIRST: ask the user to enter their friends rocket chat ID store that in variable user_id
-    - SECOND : Generate an invitation message to send to the friend for the meal store in variable  message
+    - FIRST: ask the user to enter their friends rocket chat ID stored in variable user_id
+    - SECOND: Generate an invitation message to send to the friend for the meal stored in variable message
     - THIRD: Use the RC_message tool to send a message.
 
     ### PROVIDED TOOLS INFORMATION ###
