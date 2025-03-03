@@ -116,7 +116,7 @@ def restaurant_assistant_llm(message, user):
     # Handle different scenarios and update the response text or add attachments as needed
     if "now searching" in response_text.lower():
         api_results = search_restaurants(user_session)
-        response_obj["text"] = api_results[0]
+        response_obj["text"] += api_results[0]
         res = api_results[1]
 
         # Update user's top choice in session_dict and save to file
@@ -224,7 +224,7 @@ def agent_contact(user):
     sid = session_dict[user]["session_id"]
     top_choice = session_dict[user]["top_choice"]
     print("in the agent!")
-    print(f"Selected restaurant: {top_choice}")
+    print(f"Selected restaurant: {session_dict[user]["top_choice"]}")
 
     system = f"""
     You are an AI agent helping users invite friends to a restaurant reservation. 
