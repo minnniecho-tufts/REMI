@@ -225,7 +225,7 @@ def agent_contact(user):
     print(session_dict[user]["top_choice"])
     print("in the agent!")
     print(f"Selected restaurant: {session_dict[user]["top_choice"]}")
-
+    return
     system = f"""
     You are an AI agent helping users invite friends to a restaurant reservation. 
     The user has chosen **{top_choice}** as their restaurant.
