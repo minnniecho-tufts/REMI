@@ -116,7 +116,7 @@ def restaurant_assistant_llm(message, user):
     # Handle different scenarios and update the response text or add attachments as needed
     if "now searching" in response_text.lower():
         api_results = search_restaurants(user_session)
-        response_obj["text"] += api_results[0]
+        response_obj["text"] = api_results[0]
         res = api_results[1]
 
         # Update user's top choice in session_dict and save to file
@@ -152,7 +152,9 @@ def restaurant_assistant_llm(message, user):
     
     if message == "yes_clicked":
         # invite friends
-         agent_contact(user)
+        response_contact = agent_contact(user)
+        return response_contact
+
         # response_obj["text"] = agent_response
         # match_user_id = re.search(r"Friend's Rocket.Chat ID: (.+)", agent_response)
         # match_message = re.search(r"Invitation Message: (.+)", agent_response)
@@ -222,10 +224,11 @@ def search_restaurants(user_session):
 # provided the rocket chat IDs of their friends
 def agent_contact(user):
     sid = session_dict[user]["session_id"]
-    print(session_dict[user]["top_choice"])
+    top_choice = session_dict[user]["top_choice"]
+    
     print("in the agent!")
-    print(f"Selected restaurant: {session_dict[user]["top_choice"]}")
-    return
+    print(f"Selected restaurant: {top_choice}")
+
     system = f"""
     You are an AI agent helping users invite friends to a restaurant reservation. 
     The user has chosen **{top_choice}** as their restaurant.
@@ -278,7 +281,7 @@ def agent_contact(user):
     agent_response = response.get('response', "⚠️ Sorry, something went wrong while generating the invitation.")
     print("Agent response:", agent_response)
 
-    if "Rocket.Chat ID:" in agent_response:
+    if "Rocket.Chat:" in agent_response:
         match_user_id = re.search(r"Friend's Rocket.Chat ID: (.+)", agent_response)
         user_id = match_user_id.group(1).strip()
         print(user_id)
