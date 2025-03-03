@@ -222,7 +222,7 @@ def search_restaurants(user_session):
 # provided the rocket chat IDs of their friends
 def agent_contact(user):
     sid = session_dict[user]["session_id"]
-    top_choice = session_dict[user]["top_choice"]
+    print(session_dict[user]["top_choice"])
     print("in the agent!")
     print(f"Selected restaurant: {session_dict[user]["top_choice"]}")
 
