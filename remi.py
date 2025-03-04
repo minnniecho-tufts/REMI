@@ -152,8 +152,7 @@ def restaurant_assistant_llm(message, user):
     
     if message == "yes_clicked":
         # invite friends
-        response_contact = agent_contact(user)
-        return jsonify(response_contact)
+        response_obj = agent_contact(user)
         
     elif message == "no_clicked":
         # send the agent our restaurant choice
