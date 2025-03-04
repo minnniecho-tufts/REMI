@@ -151,14 +151,16 @@ def restaurant_assistant_llm(message, user):
         ]
     
     if message == "yes_clicked":
-    # Invite friends using agent_contact function
+        # Invite friends using agent_contact function
         agent_response = agent_contact(user)
 
-        # Ensure we extract the response text correctly
-        if isinstance(agent_response, dict):  # If agent_contact returns a dictionary (which jsonify() does)
-            response_obj["text"] = agent_response.get("agent_response", "⚠️ No response received from agent.")
-        else:
-            response_obj["text"] = str(agent_response)  # Convert any unexpected response to string
+        # If the response is a Flask response object, extract its JSON content
+        if isinstance(agent_response, Flask.response_class):  
+            agent_response = agent_response.get_json()  # Extract JSON data
+
+        # Ensure we assign only the response text to the front-end
+        response_obj["text"] = agent_response.get("agent_response", "⚠️ No response received from agent.")
+
 
         
     elif message == "no_clicked":
