@@ -153,16 +153,7 @@ def restaurant_assistant_llm(message, user):
     if message == "yes_clicked":
         # invite friends
         response_contact = agent_contact(user)
-        return response_contact
-
-        # response_obj["text"] = agent_response
-        # match_user_id = re.search(r"Friend's Rocket.Chat ID: (.+)", agent_response)
-        # match_message = re.search(r"Invitation Message: (.+)", agent_response)
-        # user_id = match_user_id.group(1).strip()
-        # message_text = match_message.group(1).strip()
-        # Send the message via Rocket.Chat
-        #RC_message(user_id, message_text)
-
+        return jsonify(response_contact)
         
     elif message == "no_clicked":
         # send the agent our restaurant choice
@@ -173,6 +164,7 @@ def restaurant_assistant_llm(message, user):
     print("current details collected: ", user_session['preferences'])
 
     return response_obj
+
 
 
 def search_restaurants(user_session):
@@ -226,8 +218,8 @@ def agent_contact(user):
     sid = session_dict[user]["session_id"]
     top_choice = session_dict[user]["top_choice"]
     
-    print("in the agent!")
-    print(f"Selected restaurant: {top_choice}")
+    print("in the agent contact!")
+    print(f"Selected TOP restaurant: {top_choice}")
 
     system = f"""
     You are an AI agent helping users invite friends to a restaurant reservation. 
