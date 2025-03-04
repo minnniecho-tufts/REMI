@@ -151,9 +151,14 @@ def restaurant_assistant_llm(message, user):
         ]
     
     if message == "yes_clicked":
-        # invite friends
+    # Invite friends using agent_contact function
         agent_response = agent_contact(user)
-        response_obj["text"] = agent_response 
+
+        # Ensure we extract the response text correctly
+        if isinstance(agent_response, dict):  # If agent_contact returns a dictionary (which jsonify() does)
+            response_obj["text"] = agent_response.get("agent_response", "⚠️ No response received from agent.")
+        else:
+            response_obj["text"] = str(agent_response)  # Convert any unexpected response to string
 
         
     elif message == "no_clicked":
@@ -262,13 +267,13 @@ def agent_contact(user):
         user_id = match_user_id.group(1).strip()
         message_text = match_message.group(1).strip()
 
-        # Send the message via Rocket.Chat
+        # Send the message via Rocket.Chat and get a serializable response
         rocket_chat_response = RC_message(user_id, message_text)
 
         return jsonify({
             "agent_response": agent_response,
             "status": "Message Sent",
-            "rocket_chat_response": rocket_chat_response
+            "rocket_chat_response": rocket_chat_response  # This is now a dictionary
         })
 
     return jsonify({
@@ -276,6 +281,7 @@ def agent_contact(user):
         "status": "error",
         "message": "⚠️ Missing required information. Please try again."
     })
+
 
    
     
