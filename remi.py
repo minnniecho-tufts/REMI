@@ -264,8 +264,12 @@ def agent_contact(user):
     # Extract user ID and message using regex
     match_user_id = re.search(r"Friend's Rocket.Chat ID: (.+)", agent_response)
     match_message = re.search(r"Invitation Message: (.+)", agent_response)
+    print("match_message:" + match_message)
+    print("match_user_id" + match_user_id)
+
 
     if match_user_id and match_message:
+        print("in IF STATEMENT")
         user_id = match_user_id.group(1).strip()
         message_text = match_message.group(1).strip()
 
@@ -289,6 +293,7 @@ def agent_contact(user):
     
 
 def RC_message(user_id, message):
+    print('in RC MESSAGE')
     url = "https://chat.genaiconnect.net/api/v1/chat.postMessage" #URL of RocketChat server, keep the same
 
 # Headers with authentication tokens
