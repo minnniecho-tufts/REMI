@@ -259,7 +259,8 @@ def agent_contact(user):
     )
 
     agent_response = response.get('response', "⚠️ Sorry, something went wrong while generating the invitation.")
-
+    match_message, match_user_id = "", ""
+    
     # Extract user ID and message using regex
     if "Friend's Rocket.Chat ID:" in agent_response:
         match_user_id = re.search(r"Friend's Rocket.Chat ID: (.+)", agent_response)
