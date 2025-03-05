@@ -1,7 +1,7 @@
 import os
 import json
 import requests
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify , Response
 from llmproxy import generate
 import re
 
@@ -154,8 +154,8 @@ def restaurant_assistant_llm(message, user):
         # Invite friends using agent_contact function
         agent_response = agent_contact(user)
 
-        # If the response is a Flask response object, extract its JSON content
-        if isinstance(agent_response, Flask.response_class):  
+        # If the response is a Flask Response object, extract its JSON content
+        if isinstance(agent_response, Response):  
             agent_response = agent_response.get_json()  # Extract JSON data
 
         # Ensure we assign only the response text to the front-end
