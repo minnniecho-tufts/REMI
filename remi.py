@@ -103,7 +103,6 @@ def restaurant_assistant_llm(message, user):
         ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
         match = re.search(r"Search radius noted[:*\s]*(\d+)", ascii_text)  # Extract only the number
         if match:
-            print("miles", int(match.group(1)))
             metric_radius = round(int(match.group(1)) * 1609.34)
             user_session["preferences"]["radius"] = str(metric_radius)  # Store as string (convert if needed)
         else:
@@ -152,17 +151,14 @@ def restaurant_assistant_llm(message, user):
         ]
     
     if message == "yes_clicked":
-        while True:
-            print("IN WHILE")
-            agent_response = agent_contact(user)
 
-            if isinstance(agent_response, Response):  
-                agent_response = agent_response.get_json()
+        agent_response = agent_contact(user)
 
-            response_obj["text"] = agent_response.get("agent_response", "⚠️ No response received from agent.")
+        if isinstance(agent_response, Response):  
+            agent_response = agent_response.get_json()
 
-            if response_obj["text"] == "$$EXIT$$":
-                break  # Stop the loop safely
+        response_obj["text"] = agent_response.get("agent_response", "⚠️ No response received from agent.")
+
 
         # while response_obj["text"] != "$$EXIT$$":
         #     agent_response = agent_contact(user) 
