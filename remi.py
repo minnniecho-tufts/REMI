@@ -1,7 +1,7 @@
 import os
 import json
 import requests
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify , Response
 from llmproxy import generate
 import re
 
@@ -151,15 +151,16 @@ def restaurant_assistant_llm(message, user):
         ]
     
     if message == "yes_clicked":
-        # invite friends
-         agent_contact(user)
-        # response_obj["text"] = agent_response
-        # match_user_id = re.search(r"Friend's Rocket.Chat ID: (.+)", agent_response)
-        # match_message = re.search(r"Invitation Message: (.+)", agent_response)
-        # user_id = match_user_id.group(1).strip()
-        # message_text = match_message.group(1).strip()
-        # Send the message via Rocket.Chat
-        #RC_message(user_id, message_text)
+        # Invite friends using agent_contact function
+        agent_response = agent_contact(user)
+
+        # If the response is a Flask Response object, extract its JSON content
+        if isinstance(agent_response, Response):  
+            agent_response = agent_response.get_json()  # Extract JSON data
+
+        # Ensure we assign only the response text to the front-end
+        response_obj["text"] = agent_response.get("agent_response", "⚠️ No response received from agent.")
+
 
         
     elif message == "no_clicked":
@@ -171,6 +172,7 @@ def restaurant_assistant_llm(message, user):
     print("current details collected: ", user_session['preferences'])
 
     return response_obj
+
 
 
 def search_restaurants(user_session):
@@ -221,49 +223,32 @@ def search_restaurants(user_session):
 # TODO: update system instructions to instruct agent to only contact friends when the user has
 # provided the rocket chat IDs of their friends
 def agent_contact(user):
+    # Ensure user session exists
+    if user not in session_dict:
+        return jsonify({"error": "⚠️ No active session found for this user."})
+
     sid = session_dict[user]["session_id"]
-    print(session_dict[user]["top_choice"])
-    print("in the agent!")
-    print(f"Selected restaurant: {session_dict[user]["top_choice"]}")
-    return
+    top_choice = session_dict[user].get("top_choice", "N/A")  # Ensure it exists
+
     system = f"""
     You are an AI agent helping users invite friends to a restaurant reservation. 
     The user has chosen **{top_choice}** as their restaurant.
 
-    # In addition to your own intelligence, you are given access to a messaging tool.
-
-    # Think step-by-step, breaking down the task into a sequence small steps.
-
-    If you can't resolve the query based on your intelligence, ask the user to execute a tool on your behalf and share the results with you.
-    If you want the user to execute a tool on your behalf, strictly only respond with the tool's name and parameters.
-    Example response for using tool: RC_message("session-id", "join me for dinner")
-
-
-        GO THROUGH THESE STEPS:
-        1️. Ask the user to give you a date and time they want to make a reservation at {top_choice}
-        2. **Ask the user for their friend's Rocket.Chat ID** (store it in user_id).
-        3. **Generate a for their friend (store it in message).
-        4. **Once both details are collected, display them in the following format:**
-        
-            ✅ **Friend's Rocket.Chat ID:** [user_id]  
-            ✅ **Invitation Message:** [message]  
-            
-            📩 *Thank you! Now contacting your friend...*
-
-        4️⃣ **After you have all information respond with Friend's "Rocket.Chat ID:** [user_id]\n **Invitation Message:** [message]\n" """
-
-    # The name of the provided tools and their parameters are given below.
-    # The output of tool execution will be shared with you so you can decide your next steps.
-
-    # ### PROVIDED TOOLS INFORMATION ###
-    # ##1. Tool to send an email
-    # Name: RC_message
-    # Parameters: user_id , invitation_message
-    # example usage: RC_message("@niam.lakhani", "join me for dinner at Masala 29th March 8pm?"). 
-    # Once you have all the parameters to send a message, display them to the user
-    # and respond with "RC_message(user_id, invitation_message)" with the parameters filled in 
-    # appropriately.
+    GO THROUGH THESE STEPS:
+    1. Ask the user for a **date and time** for their reservation.
+    2. Ask the user for their **friend’s Rocket.Chat ID**.
+    3. Generate an **invitation message** for the friend.
+    4. Once both details are collected, format them like this:
     
+        ✅ **Friend's Rocket.Chat ID:** [user_id]  
+        ✅ **Invitation Message:** [message]  
+        
+        📩 *Thank you! Now contacting your friend...*
+
+    5. **Once all details are collected, return:**  
+       `"RC_message(user_id, message)"`
+    """
+
     response = generate(
         model='4o-mini',
         system=system,
@@ -273,41 +258,32 @@ def agent_contact(user):
         session_id=sid,
         rag_usage=False
     )
-    
-   
+
     agent_response = response.get('response', "⚠️ Sorry, something went wrong while generating the invitation.")
-    print("Agent response:", agent_response)
 
-    if "Rocket.Chat ID:" in agent_response:
-        match_user_id = re.search(r"Friend's Rocket.Chat ID: (.+)", agent_response)
+    # Extract user ID and message using regex
+    match_user_id = re.search(r"Friend's Rocket.Chat ID: (.+)", agent_response)
+    match_message = re.search(r"Invitation Message: (.+)", agent_response)
+
+    if match_user_id and match_message:
         user_id = match_user_id.group(1).strip()
-        print(user_id)
-    
-    if "Rocket.Chat ID:" in agent_response:
-        match_message = re.search(r"Invitation Message: (.+)", agent_response)
         message_text = match_message.group(1).strip()
-        print(message_text)
-        
-    return agent_response
 
-    # Extract user ID and message
-    # match_user_id = re.search(r"Friend's Rocket.Chat ID: (.+)", agent_response)
-    # match_message = re.search(r"Invitation Message: (.+)", agent_response)
+        # Send the message via Rocket.Chat and get a serializable response
+        rocket_chat_response = RC_message(user_id, message_text)
 
-    
-    # print(f"👤 Friend's Rocket.Chat ID: {user_id}")
-    # print(f"💬 Invitation Message: {message_text}")
-    
-    # if match_user_id and match_message:
-    #     user_id = match_user_id.group(1).strip()
-    #     message_text = match_message.group(1).strip()
+        return jsonify({
+            "agent_response": agent_response,
+            "status": "Message Sent",
+            "rocket_chat_response": rocket_chat_response  # This is now a dictionary
+        })
 
-    #     # Send the message via Rocket.Chat
-    #     RC_message(user_id, message_text)
+    return jsonify({
+        "agent_response": agent_response,
+        "status": "error",
+        "message": "⚠️ Missing required information. Please try again."
+    })
 
-    #     return agent_response 
-        
-    # return "⚠️ Missing required information. Please try again."
 
    
     
