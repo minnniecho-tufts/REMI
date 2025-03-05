@@ -116,7 +116,7 @@ def restaurant_assistant_llm(message, user):
     # Handle different scenarios and update the response text or add attachments as needed
     if "now searching" in response_text.lower():
         api_results = search_restaurants(user_session)
-        response_obj["text"] += api_results[0]
+        response_obj["text"] = api_results[0]
         res = api_results[1]
 
         # Update user's top choice in session_dict and save to file
@@ -261,11 +261,8 @@ def agent_contact(user):
 
     agent_response = response.get('response', "⚠️ Sorry, something went wrong while generating the invitation.")
 
-    # Extract user ID and message using regex
-    match_user_id = re.search(r"Friend's Rocket.Chat ID: (.+)", agent_response)
-    match_message = re.search(r"Invitation Message: (.+)", agent_response)
-
-    if match_user_id and match_message:
+    if "Rocket.Chat ID:" in agent_response:
+        match_user_id = re.search(r"Friend's Rocket.Chat ID: (.+)", agent_response)
         user_id = match_user_id.group(1).strip()
         message_text = match_message.group(1).strip()
 
@@ -289,6 +286,7 @@ def agent_contact(user):
     
 
 def RC_message(user_id, message):
+    print('in RC MESSAGE')
     url = "https://chat.genaiconnect.net/api/v1/chat.postMessage" #URL of RocketChat server, keep the same
 
 # Headers with authentication tokens
