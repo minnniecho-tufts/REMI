@@ -229,6 +229,7 @@ def agent_contact(user):
     print("In agent contact")
     # Ensure user session exists
     if user not in session_dict:
+        print("IF LOOP: user not in session_dict")
         return jsonify({"error": "⚠️ No active session found for this user."})
 
     sid = session_dict[user]["session_id"]
@@ -249,8 +250,6 @@ def agent_contact(user):
         
         📩 *Thank you! Now contacting your friend...*
 
-    5. **Once all details are collected, return:**  
-       `"RC_message(user_id, message)"`
     """
 
     response = generate(
@@ -270,12 +269,15 @@ def agent_contact(user):
     match_message = re.search(r"Invitation Message: (.+)", agent_response)
 
     if match_user_id and match_message:
+        print("FOUND match_user_id and match_message")
         user_id = match_user_id.group(1).strip()
         message_text = match_message.group(1).strip()
 
         # Send the message via Rocket.Chat and get a serializable response
         rocket_chat_response = RC_message(user_id, message_text)
 
+        print(str(agent_response))
+        
         return jsonify({
             "agent_response": agent_response,
             "status": "Message Sent",
@@ -294,6 +296,7 @@ def agent_contact(user):
     
 
 def RC_message(user_id, message):
+    print("in RC_message function")
     url = "https://chat.genaiconnect.net/api/v1/chat.postMessage" #URL of RocketChat server, keep the same
 
 # Headers with authentication tokens
