@@ -236,8 +236,9 @@ def search_restaurants(user_session):
 def agent_contact(user):
     print("iN AGENT CONTACT")
     # # Ensure user session exists
-    # if user not in session_dict:
-    #     return jsonify({"error": "⚠️ No active session found for this user."})
+    if user not in session_dict:
+        print("if user not")
+        # return jsonify({"error": "⚠️ No active session found for this user."})
 
     sid = session_dict[user]["session_id"]
     top_choice = session_dict[user].get("top_choice", "N/A")  # Ensure it exists
