@@ -38,6 +38,7 @@ session_dict = load_sessions()
 
 ### --- MAIN BOT FUNCTION --- ###
 def restaurant_assistant_llm(message, user):
+    print("res LLM")
     """Handles the full conversation and recommends a restaurant."""
     sid = session_dict[user]["session_id"]
     response = generate(
@@ -171,6 +172,8 @@ def restaurant_assistant_llm(message, user):
 
     print("current details collected: ", user_session['preferences'])
 
+    print(str(response_obj))
+
     return response_obj
 
 
@@ -223,6 +226,7 @@ def search_restaurants(user_session):
 # TODO: update system instructions to instruct agent to only contact friends when the user has
 # provided the rocket chat IDs of their friends
 def agent_contact(user):
+    print("In agent contact")
     # Ensure user session exists
     if user not in session_dict:
         return jsonify({"error": "⚠️ No active session found for this user."})
@@ -277,7 +281,8 @@ def agent_contact(user):
             "status": "Message Sent",
             "rocket_chat_response": rocket_chat_response  # This is now a dictionary
         })
-
+    
+    print(str(agent_response))
     return jsonify({
         "agent_response": agent_response,
         "status": "error",
@@ -319,6 +324,7 @@ def booking():
 ### --- FLASK ROUTE TO HANDLE USER REQUESTS --- ###
 @app.route('/query', methods=['POST'])
 def main():
+    print("startiing main exec")
     """Handles user messages and manages session storage."""
     global session_dict
 
