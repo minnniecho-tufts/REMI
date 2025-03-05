@@ -151,16 +151,15 @@ def restaurant_assistant_llm(message, user):
         ]
     
     if message == "yes_clicked":
-        # Invite friends using agent_contact function
-        agent_response = agent_contact(user)
+        while response_obj["text"] != "$$EXIT$$":
+            agent_response = agent_contact(user) 
 
-        # If the response is a Flask Response object, extract its JSON content
-        if isinstance(agent_response, Response):  
-            agent_response = agent_response.get_json()  # Extract JSON data
+            # If the response is a Flask Response object, extract its JSON content
+            if isinstance(agent_response, Response):  
+                agent_response = agent_response.get_json()  # Extract JSON data
 
-        # Ensure we assign only the response text to the front-end
-        response_obj["text"] = agent_response.get("agent_response", "⚠️ No response received from agent.")
-
+            # Ensure we assign only the response text to the front-end
+            response_obj["text"] = agent_response.get("agent_response", "⚠️ No response received from agent.")
 
         
     elif message == "no_clicked":
@@ -246,7 +245,7 @@ def agent_contact(user):
         📩 *Thank you! Now contacting your friend...*
 
     5. **Once all details are collected, return:**  
-       `"RC_message(user_id, message)"`
+       `"$$EXIT$$"`
     """
 
     response = generate(
@@ -261,8 +260,21 @@ def agent_contact(user):
 
     agent_response = response.get('response', "⚠️ Sorry, something went wrong while generating the invitation.")
 
-    if "Rocket.Chat ID:" in agent_response:
+    # Extract user ID and message using regex
+    if "Friend's Rocket.Chat ID:" in agent_response:
         match_user_id = re.search(r"Friend's Rocket.Chat ID: (.+)", agent_response)
+        print("match_user_id" + str(match_user_id))
+    
+    if "Invitation Message:" in agent_response:
+        match_message = re.search(r"Invitation Message: (.+)", agent_response)
+        print("match_message:" + str(match_message))
+    
+
+
+    if match_user_id and match_message:
+        print("in IF STATEMENT")
+        # print("match_message:" + str(match_message))
+        # print("match_user_id" + str(match_user_id))
         user_id = match_user_id.group(1).strip()
         message_text = match_message.group(1).strip()
 
