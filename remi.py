@@ -151,15 +151,27 @@ def restaurant_assistant_llm(message, user):
         ]
     
     if message == "yes_clicked":
-        while response_obj["text"] != "$$EXIT$$":
-            agent_response = agent_contact(user) 
+        while True:
+            print("IN WHILE")
+            agent_response = agent_contact(user)
 
-            # If the response is a Flask Response object, extract its JSON content
             if isinstance(agent_response, Response):  
-                agent_response = agent_response.get_json()  # Extract JSON data
+                agent_response = agent_response.get_json()
 
-            # Ensure we assign only the response text to the front-end
             response_obj["text"] = agent_response.get("agent_response", "⚠️ No response received from agent.")
+
+            if response_obj["text"] == "$$EXIT$$":
+                break  # Stop the loop safely
+
+        # while response_obj["text"] != "$$EXIT$$":
+        #     agent_response = agent_contact(user) 
+
+        #     # If the response is a Flask Response object, extract its JSON content
+        #     if isinstance(agent_response, Response):  
+        #         agent_response = agent_response.get_json()  # Extract JSON data
+
+        #     # Ensure we assign only the response text to the front-end
+        #     response_obj["text"] = agent_response.get("agent_response", "⚠️ No response received from agent.")
 
         
     elif message == "no_clicked":
@@ -222,6 +234,7 @@ def search_restaurants(user_session):
 # TODO: update system instructions to instruct agent to only contact friends when the user has
 # provided the rocket chat IDs of their friends
 def agent_contact(user):
+    print("iN AGENT CONTACT")
     # Ensure user session exists
     if user not in session_dict:
         return jsonify({"error": "⚠️ No active session found for this user."})
