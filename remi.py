@@ -57,13 +57,14 @@ def restaurant_assistant_llm(message, user):
               "cheap": "1", "mid-range": "2", "expensive": "3", "fine dining": "4"
             - THIRD:  Ask the user for their **location** in a natural way (acceptable inputs include city, state, and zip code).
             - FOURTH: Ask the user what their preferred search radius is. The search radius cannot be greater than 20 miles.
-            - Put a lot of **emojis** and be **fun and quirky**.
+            - Use a lot of **emojis** and be **fun and quirky**.
             - Ask the user for the **occasion** to make it more engaging.
             - After the user has provided all four parameters of cuisine, budget, location, AND search radius, 
             respond with the following in a bulleted list format:
                 "Cuisine noted: [cuisine]\nLocation noted: [location]\nBudget noted: [budget (1-4)]\nSearch radius noted: [radius (in meters)]"
             and then say, "Thank you! Now searching..."
-            - If the user provides a **reservation date and time**, store these details.
+            - If the user is interested in inviting friends, they will respond with yes_clicked. If they are not, they will respond with no_clicked.
+            - If the user provides a **reservation date and time**, remember these details.
             - If the user tags a friend using '@' (e.g., "@john_doe"), generate a **personalized invitation message** including:
                 - The **restaurant name**
                 - The **reservation date**
@@ -73,7 +74,7 @@ def restaurant_assistant_llm(message, user):
 
         query=message,
         temperature=0.7,
-        lastk=10,
+        lastk=0,
         session_id=sid,
         rag_usage=False
     )
@@ -147,7 +148,7 @@ def restaurant_assistant_llm(message, user):
     # Handle different scenarios and update the response text or add attachments as needed
     if "now searching" in response_text.lower():
         api_results = search_restaurants(user_session)
-        response_obj["text"] = api_results[0]
+        response_obj["text"] += api_results[0]
         session_dict[user]["api_results"] = api_results[1]
 
         # Update user's top choice in session_dict and save to file
