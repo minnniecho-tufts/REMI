@@ -105,6 +105,7 @@ def restaurant_assistant_llm(message, user):
     # Check if the user provided a Rocket.Chat ID (i.e., an @username)
     match = re.search(r"@(\S+)", message)
     if match:
+        print( "TOP CHOICE" + str(top_choice))
         rocket_chat_id = match.group(1)  # Extract username after "@"
 
         # Send a message via Rocket.Chat
