@@ -63,7 +63,6 @@ def restaurant_assistant_llm(message, user):
             respond with the following in a bulleted list format:
                 "Cuisine noted: [cuisine]\nLocation noted: [location]\nBudget noted: [budget (1-4)]\nSearch radius noted: [radius (in meters)]"
             and then say, "Thank you! Now searching..."
-            - IF AND WHEN the user provides you with a date and time for the reservation 
             - If the user provides a **reservation date and time**, store these details.
             - If the user tags a friend using '@' (e.g., "@john_doe"), generate a **personalized invitation message** including:
                 - The **restaurant name**
@@ -74,7 +73,7 @@ def restaurant_assistant_llm(message, user):
 
         query=message,
         temperature=0.7,
-        lastk=5,
+        lastk=10,
         session_id=sid,
         rag_usage=False
     )
@@ -86,95 +85,59 @@ def restaurant_assistant_llm(message, user):
             "preferences": {"cuisine": None, "budget": None, "location": None, "radius": None}
     }
 
-    # Extract restaurant name, reservation date, and reservation time from response_text
-    reservation_date_match = re.search(r"Reservation date[:*\s]*(\S.*)", response_text)
-    reservation_time_match = re.search(r"Reservation time[:*\s]*(\S.*)", response_text)
-
-    reservation_date = reservation_date_match.group(1).strip() if reservation_date_match else "a date"
-    reservation_time = reservation_time_match.group(1).strip() if reservation_time_match else "a time"
-
-    #getting top res name
-    # Extract restaurant name from session_dict
-    top_choice = session_dict[user].get("top_choice", "")
-
-    # Use regex to extract just the restaurant name
-    restaurant_name_match = re.search(r"\*\*(.*?)\*\*", top_choice)
-    restaurant_name = restaurant_name_match.group(1) if restaurant_name_match else "a restaurant"
-
     
-    # Check if the user provided a Rocket.Chat ID (i.e., an @username)
-    match = re.search(r"@(\S+)", message)
-    if match:
-        print( "TOP CHOICE" + str(top_choice))
-        rocket_chat_id = match.group(1)  # Extract username after "@"
+    # Extracts a user preference from the response text using a regex pattern
+    def extract_preference(response_text, key, pattern, conversion=None):
+        match = re.search(pattern, response_text)
+        if match:
+            value = match.group(1).strip()
+            return conversion(value) if conversion else value  # Apply conversion if provided
+        return None
 
-        # Send a message via Rocket.Chat
-        invitation_message = f"""
-        
-        Hey @{rocket_chat_id}! 🍽️ {user} has invited you to dinner at **{restaurant_name}** on 📅 {reservation_date} at ⏰ {reservation_time}. Let’s go! 🎉
+    # Remove non-ASCII characters from response_text
+    response_text = re.sub(r"[^\x00-\x7F]+", "", response_text)
 
-        Are you able to attend?
-        """
+    # Define patterns and optional conversions
+    preference_patterns = {
+        "cuisine": (r"Cuisine noted[:*\s]*(\S.*)", None),
+        "budget": (r"Budget noted[:*\s]*(\d+)", str),
+        "location": (r"Location noted[:*\s]*(\S.*)", None),
+        "radius": (r"Search radius noted[:*\s]*(\d+)", lambda x: str(round(int(x) * 1609.34)))
+    }
 
-        # Construct Yes/No buttons
-        buttons = [
-            {
-                "type": "button",
-                "text": "✅ Yes, I'll be there!",
-                "msg": f"yes_response_{rocket_chat_id}",
-                "msg_in_chat_window": True,
-                "msg_processing_type": "sendMessage",
-                "button_id": "yes_button"
-            },
-            {
-                "type": "button",
-                "text": "❌ No, I can't make it.",
-                "msg": f"no_response_{rocket_chat_id}",
-                "msg_in_chat_window": True,
-                "msg_processing_type": "sendMessage",
-                "button_id": "no_button"
-            }
-        ]
-        rc_response = RC_message(f"@{rocket_chat_id}", invitation_message, buttons)  # Ensure correct format
+    # Extract preferences dynamically
+    for key, (pattern, conversion) in preference_patterns.items():
+        user_session["preferences"][key] = extract_preference(response_text, key, pattern, conversion)
 
-        # Log response from Rocket.Chat API
-        print(f"📩 Rocket.Chat API Response: {rc_response}")
+    # if "Cuisine noted:" in response_text:
+    #     ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
+    #     match = re.search(r"Cuisine noted[:*\s]*(\S.*)", ascii_text)  # Capture actual text after "*Cuisine noted:*"
+    #     if match:
+    #         user_session["preferences"]["cuisine"] = match.group(1).strip()  # Remove extra spaces
 
-        # Respond to the user with a confirmation
-        return {
-            "text": f"📩 Invitation sent to **{rocket_chat_id}** on Rocket.Chat! Thank you for using REMI!"
-        }
+    # if "Budget noted:" in response_text:
+    #     ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
+    #     match = re.search(r"Budget noted[:*\s]*(\d+)", ascii_text)  # Extract only the number
+    #     if match:
+    #         user_session["preferences"]["budget"] = match.group(1)  # Store as string (convert if needed)
+    #     else:
+    #         user_session["preferences"]["budget"] = None  # Handle cases where no number is found
     
-    # Extract information from LLM response
-    if "Cuisine noted:" in response_text:
-        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
-        match = re.search(r"Cuisine noted[:*\s]*(\S.*)", ascii_text)  # Capture actual text after "*Cuisine noted:*"
-        if match:
-            user_session["preferences"]["cuisine"] = match.group(1).strip()  # Remove extra spaces
-
-    if "Budget noted:" in response_text:
-        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
-        match = re.search(r"Budget noted[:*\s]*(\d+)", ascii_text)  # Extract only the number
-        if match:
-            user_session["preferences"]["budget"] = match.group(1)  # Store as string (convert if needed)
-        else:
-            user_session["preferences"]["budget"] = None  # Handle cases where no number is found
+    # if "Location noted:" in response_text:
+    #     ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
+    #     match = re.search(r"Location noted[:*\s]*(\S.*)", ascii_text)  # Capture actual text after "*Location noted:*"
+    #     if match:
+    #         user_session["preferences"]["location"] = match.group(1).strip()  # Remove extra spaces
     
-    if "Location noted:" in response_text:
-        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
-        match = re.search(r"Location noted[:*\s]*(\S.*)", ascii_text)  # Capture actual text after "*Location noted:*"
-        if match:
-            user_session["preferences"]["location"] = match.group(1).strip()  # Remove extra spaces
-    
-    if "Search radius noted:" in response_text:
-        ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
-        match = re.search(r"Search radius noted[:*\s]*(\d+)", ascii_text)  # Extract only the number
-        if match:
-            print(match)
-            metric_radius = round(int(match.group(1)) * 1609.34)
-            user_session["preferences"]["radius"] = str(metric_radius)  # Store as string (convert if needed)
-        else:
-            user_session["preferences"]["radius"] = None  # Handle cases where no number is found
+    # if "Search radius noted:" in response_text:
+    #     ascii_text = re.sub(r"[^\x00-\x7F]+", "", response_text)  # Remove non-ASCII characters
+    #     match = re.search(r"Search radius noted[:*\s]*(\d+)", ascii_text)  # Extract only the number
+    #     if match:
+    #         print(match)
+    #         metric_radius = round(int(match.group(1)) * 1609.34)
+    #         user_session["preferences"]["radius"] = str(metric_radius)  # Store as string (convert if needed)
+    #     else:
+    #         user_session["preferences"]["radius"] = None  # Handle cases where no number is found
 
     # Create the response object with the basic text
     response_obj = {
@@ -238,6 +201,64 @@ def restaurant_assistant_llm(message, user):
 
 
     print("current details collected: ", user_session['preferences'])
+    # Extract restaurant name, reservation date, and reservation time from response_text
+    reservation_date_match = re.search(r"Reservation date[:*\s]*(\S.*)", response_text)
+    reservation_time_match = re.search(r"Reservation time[:*\s]*(\S.*)", response_text)
+
+    reservation_date = reservation_date_match.group(1).strip() if reservation_date_match else "a date"
+    reservation_time = reservation_time_match.group(1).strip() if reservation_time_match else "a time"
+
+    #getting top res name
+    # Extract restaurant name from session_dict
+    top_choice = session_dict[user].get("top_choice", "")
+
+    # Use regex to extract just the restaurant name
+    restaurant_name_match = re.search(r"\*\*(.*?)\*\*", top_choice)
+    restaurant_name = restaurant_name_match.group(1) if restaurant_name_match else "a restaurant"
+
+    
+    # Check if the user provided a Rocket.Chat ID (i.e., an @username)
+    match = re.search(r"@(\S+)", message)
+    if match:
+        print( "TOP CHOICE" + str(top_choice))
+        rocket_chat_id = match.group(1)  # Extract username after "@"
+
+        # Send a message via Rocket.Chat
+        invitation_message = f"""
+        
+        Hey @{rocket_chat_id}! 🍽️ {user} has invited you to dinner at **{restaurant_name}** on 📅 {reservation_date} at ⏰ {reservation_time}. Let’s go! 🎉
+
+        Are you able to attend?
+        """
+
+        # Construct Yes/No buttons
+        buttons = [
+            {
+                "type": "button",
+                "text": "✅ Yes, I'll be there!",
+                "msg": f"yes_response_{rocket_chat_id}",
+                "msg_in_chat_window": True,
+                "msg_processing_type": "sendMessage",
+                "button_id": "yes_button"
+            },
+            {
+                "type": "button",
+                "text": "❌ No, I can't make it.",
+                "msg": f"no_response_{rocket_chat_id}",
+                "msg_in_chat_window": True,
+                "msg_processing_type": "sendMessage",
+                "button_id": "no_button"
+            }
+        ]
+        rc_response = RC_message(f"@{rocket_chat_id}", invitation_message, buttons)  # Ensure correct format
+
+        # Log response from Rocket.Chat API
+        print(f"📩 Rocket.Chat API Response: {rc_response}")
+
+        # Respond to the user with a confirmation
+        return {
+            "text": f"📩 Invitation sent to **{rocket_chat_id}** on Rocket.Chat! Thank you for using REMI!"
+        }
 
     print(str(response_obj))
 
