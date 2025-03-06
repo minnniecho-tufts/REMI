@@ -57,7 +57,7 @@ def restaurant_assistant_llm(message, user):
               "cheap": "1", "mid-range": "2", "expensive": "3", "fine dining": "4"
             - THIRD:  Ask the user for their **location** in a natural way (acceptable inputs include city, state, and zip code).
             - FOURTH: Ask the user what their preferred search radius is. The search radius cannot be greater than 20 miles.
-            - Use a lot of **emojis** and be **fun and quirky**.
+            - Always use a lot of **emojis** and be **fun and quirky** in all of your responses.
             - Ask the user for the **occasion** to make it more engaging.
             - After the user has provided all four parameters of cuisine, budget, location, AND search radius, 
             respond with the following in a bulleted list format:
@@ -149,13 +149,14 @@ def restaurant_assistant_llm(message, user):
     if "now searching" in response_text.lower():
         api_results = search_restaurants(user_session)
         response_obj["text"] += api_results[0]
+
         session_dict[user]["api_results"] = api_results[1]
         print(session_dict[user]["api_results"])
 
-        # Update user's top choice in session_dict and save to file
         if len(session_dict[user]["api_results"]) > 2:
             response_obj["text"] = "To indicate your top choice restaurant, please type 'Top choice: ' followed by its number from the list. For example, if you want the first choice in the list, type 'Top choice: 1'."
         else: 
+            # Update user's top choice in session_dict and save to file
             session_dict[user]["top_choice"] = session_dict[user]["api_results"][1]
             response_obj["attachments"] = [
                 {
