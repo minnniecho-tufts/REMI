@@ -108,8 +108,33 @@ def restaurant_assistant_llm(message, user):
         rocket_chat_id = match.group(1)  # Extract username after "@"
 
         # Send a message via Rocket.Chat
-        invitation_message = f"Hey @{rocket_chat_id}! 🍽️ {user} has invited you to dinner at **{restaurant_name}** on **{reservation_date}** at **{reservation_time}**. Let’s go! \n Are you able to go? "
-        rc_response = RC_message(f"@{rocket_chat_id}", invitation_message)  # Ensure correct format
+        invitation_message = f"""
+        
+        Hey @{rocket_chat_id}! 🍽️ {user} has invited you to dinner at **{restaurant_name}** on 📅 {reservation_date} at ⏰ {reservation_time}. Let’s go! 🎉
+
+        Are you able to attend?
+        """
+
+        # Construct Yes/No buttons
+        buttons = [
+            {
+                "type": "button",
+                "text": "✅ Yes, I'll be there!",
+                "msg": f"yes_response_{rocket_chat_id}",
+                "msg_in_chat_window": True,
+                "msg_processing_type": "sendMessage",
+                "button_id": "yes_button"
+            },
+            {
+                "type": "button",
+                "text": "❌ No, I can't make it.",
+                "msg": f"no_response_{rocket_chat_id}",
+                "msg_in_chat_window": True,
+                "msg_processing_type": "sendMessage",
+                "button_id": "no_button"
+            }
+        ]
+        rc_response = RC_message(f"@{rocket_chat_id}", invitation_message, buttons)  # Ensure correct format
 
         # Log response from Rocket.Chat API
         print(f"📩 Rocket.Chat API Response: {rc_response}")
@@ -237,7 +262,7 @@ def search_restaurants(user_session):
         "term": cuisine,
         "location": location,
         "price": budget,  # Yelp API uses 1 (cheap) to 4 (expensive)
-        "radius": 5, # HARDCODED THIS TO AVOID ERRORS FOR NOW!
+        "radius": 8000, # HARDCODED THIS TO AVOID ERRORS FOR NOW!
         "limit": 1,  # top
         "sort_by": "best_match"
     }
@@ -338,7 +363,7 @@ def agent_contact(user, message):
    
     
 
-def RC_message(user_id, message):
+def RC_message(user_id, message, buttons=None):
     print("in RC_message function")
     url = "https://chat.genaiconnect.net/api/v1/chat.postMessage" #URL of RocketChat server, keep the same
 
@@ -352,7 +377,14 @@ def RC_message(user_id, message):
     # Payload (data to be sent)
     payload = {
         "channel": user_id, #Change this to your desired user, for any user it should start with @ then the username
-        "text": message #This where you add your message to the user
+        "text": message, #This where you add your message to the user
+        "attachments": [
+            {
+                "title": "RSVP",
+                "text": "Click a button to respond:",
+                "actions": buttons if buttons else []  # Add buttons if provided
+            }
+        ]
     }
 
     # Sending the POST request
