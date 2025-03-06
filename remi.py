@@ -116,7 +116,7 @@ def restaurant_assistant_llm(message, user):
 
         # Respond to the user with a confirmation
         return {
-            "text": f"📩 Invitation sent to **{rocket_chat_id}** on Rocket.Chat! Thanks for using REMI!"
+            "text": f"📩 Invitation sent to **{rocket_chat_id}** on Rocket.Chat! Thank you for using REMI!"
         }
     
     # Extract information from LLM response
@@ -237,7 +237,7 @@ def search_restaurants(user_session):
         "term": cuisine,
         "location": location,
         "price": budget,  # Yelp API uses 1 (cheap) to 4 (expensive)
-        "radius": radius,
+        "radius": 5, # HARDCODED THIS TO AVOID ERRORS FOR NOW!
         "limit": 1,  # top
         "sort_by": "best_match"
     }
