@@ -148,14 +148,19 @@ def restaurant_assistant_llm(message, user):
     if "now searching" in response_text.lower():
         api_results = search_restaurants(user_session)
         response_obj["text"] = api_results[0]
-        res = api_results[1]
+        session_dict[user]["api_results"] = api_results[1]
 
         # Update user's top choice in session_dict and save to file
-        if len(res) > 1:
-            session_dict[user]["top_choice"] = res[1]  # Store the top restaurant
-        save_sessions(session_dict)  # Persist changes
+        if len(session_dict[user]["api_results"]) > 1:
+            response_obj["text"] = "To indicate your top choice restaurant, please type 'Top choice: ' followed by its number from the list. For example, if you want the first choice in the list, type 'Top choice: 1'."
 
-        print("Got top choice from API:", session_dict[user]["top_choice"])
+    if "top choice" in message.lower():
+        match = re.search(r"top choice[:*\s]*(\d+)", re.sub(r"[^\x00-\x7F]+", "", message.lower()))
+        index = int(match.group(1)) if match else None
+        session_dict[user]["top_choice"] = session_dict[user]["api_results"][index]  # Store the top restaurant
+
+        save_sessions(session_dict)  # Persist changes
+        print("Got top choice from user:", session_dict[user]["top_choice"])
 
         response_obj["attachments"] = [
             {
@@ -285,7 +290,7 @@ def search_restaurants(user_session):
         "location": location,
         "price": budget,  # Yelp API uses 1 (cheap) to 4 (expensive)
         "radius": 8000, # HARDCODED THIS TO AVOID ERRORS FOR NOW!
-        "limit": 1,  # top
+        "limit": 5,  # top
         "sort_by": "best_match"
     }
 
@@ -438,7 +443,7 @@ def main():
     # Load user session if it exists, otherwise create a new one
     if user not in session_dict:
         print("new user", user)
-        session_dict[user] = {"session_id": f"{user}-session", "top_choice": ""}
+        session_dict[user] = {"session_id": f"{user}-session", "api_results": [], "top_choice": ""}
         save_sessions(session_dict)
 
     sid = session_dict[user]["session_id"]
