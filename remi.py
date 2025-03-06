@@ -63,7 +63,7 @@ def restaurant_assistant_llm(message, user):
             respond with the following in a bulleted list format:
                 "Cuisine noted: [cuisine]\nLocation noted: [location]\nBudget noted: [budget (1-4)]\nSearch radius noted: [radius (in meters)]"
             and then say, "Thank you! Now searching..."
-            - IF the user clicked "yes_clicked", assign message == "yes_clicked" from now on 
+            - IF AND WHEN the user provides you with a date and time for the reservation ONLY RESPOND WITH "yes_clicked"
         """,
 
         query=message,
@@ -79,6 +79,24 @@ def restaurant_assistant_llm(message, user):
             "state": "conversation",
             "preferences": {"cuisine": None, "budget": None, "location": None, "radius": None}
     }
+
+    # Check if the user provided a Rocket.Chat ID (i.e., an @username)
+    match = re.search(r"@(\S+)", message)
+    if match:
+        rocket_chat_id = match.group(1)  # Extract username after "@"
+        print(f"🚀 Detected Rocket.Chat ID: {rocket_chat_id}")
+
+        # Send a message via Rocket.Chat
+        invitation_message = f"{user} has invited you to join a restaurant reservation! 🍽️"
+        rc_response = RC_message(f"@{rocket_chat_id}", invitation_message)  # Ensure correct format
+
+        # Log response from Rocket.Chat API
+        print(f"📩 Rocket.Chat API Response: {rc_response}")
+
+        # Respond to the user with a confirmation
+        return {
+            "text": f"📩 Invitation sent to **{rocket_chat_id}** on Rocket.Chat!"
+        }
     
     # Extract information from LLM response
     if "Cuisine noted:" in response_text:
@@ -155,7 +173,7 @@ def restaurant_assistant_llm(message, user):
     
     if message == "yes_clicked":
         # Invite friends using agent_contact function
-        agent_response = agent_contact(user)
+        agent_response = agent_contact(user, message)
 
         # If the response is a Flask Response object, extract its JSON content
         if isinstance(agent_response, Response):  
@@ -227,7 +245,7 @@ def search_restaurants(user_session):
 # COPIED FROM example_agent_tool
 # TODO: update system instructions to instruct agent to only contact friends when the user has
 # provided the rocket chat IDs of their friends
-def agent_contact(user):
+def agent_contact(user, message):
     print("In agent contact")
     # Ensure user session exists
     if user not in session_dict:
@@ -257,7 +275,7 @@ def agent_contact(user):
     response = generate(
         model='4o-mini',
         system=system,
-        query=f"The user has chosen {top_choice}. Start the process.",
+        query=message,
         temperature=0.7,
         lastk=10,
         session_id=sid,
@@ -285,6 +303,8 @@ def agent_contact(user):
             "status": "Message Sent",
             "rocket_chat_response": rocket_chat_response  # This is now a dictionary
         })
+    
+    
     
     print(str(agent_response))
     return jsonify({
