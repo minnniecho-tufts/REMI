@@ -63,7 +63,13 @@ def restaurant_assistant_llm(message, user):
             respond with the following in a bulleted list format:
                 "Cuisine noted: [cuisine]\nLocation noted: [location]\nBudget noted: [budget (1-4)]\nSearch radius noted: [radius (in meters)]"
             and then say, "Thank you! Now searching..."
-            - IF AND WHEN the user provides you with a date and time for the reservation ONLY RESPOND WITH "yes_clicked"
+            - IF AND WHEN the user provides you with a date and time for the reservation 
+            - If the user provides a **reservation date and time**, store these details.
+            - If the user tags a friend using '@' (e.g., "@john_doe"), generate a **personalized invitation message** including:
+                - The **restaurant name**
+                - The **reservation date**
+                - The **reservation time**
+                - A friendly, inviting tone
         """,
 
         query=message,
@@ -80,14 +86,25 @@ def restaurant_assistant_llm(message, user):
             "preferences": {"cuisine": None, "budget": None, "location": None, "radius": None}
     }
 
+    # Extract restaurant name, reservation date, and reservation time from response_text
+    restaurant_name_match = re.search(r"Restaurant name[:*\s]*(\S.*)", response_text)
+    reservation_date_match = re.search(r"Reservation date[:*\s]*(\S.*)", response_text)
+    reservation_time_match = re.search(r"Reservation time[:*\s]*(\S.*)", response_text)
+
+    # Default values if not found
+    restaurant_name = restaurant_name_match.group(1).strip() if restaurant_name_match else "a restaurant"
+    reservation_date = reservation_date_match.group(1).strip() if reservation_date_match else "a date"
+    reservation_time = reservation_time_match.group(1).strip() if reservation_time_match else "a time"
+
+    
+    
     # Check if the user provided a Rocket.Chat ID (i.e., an @username)
     match = re.search(r"@(\S+)", message)
     if match:
         rocket_chat_id = match.group(1)  # Extract username after "@"
-        print(f"🚀 Detected Rocket.Chat ID: {rocket_chat_id}")
 
         # Send a message via Rocket.Chat
-        invitation_message = f"{user} has invited you to join a restaurant reservation! 🍽️"
+        invitation_message = f"Hey @{rocket_chat_id}! 🍽️ {user} has invited you to dinner at **{restaurant_name}** on **{reservation_date}** at **{reservation_time}**. Let’s go! 🎉"
         rc_response = RC_message(f"@{rocket_chat_id}", invitation_message)  # Ensure correct format
 
         # Log response from Rocket.Chat API
