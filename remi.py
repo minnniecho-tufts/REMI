@@ -150,19 +150,47 @@ def restaurant_assistant_llm(message, user):
         api_results = search_restaurants(user_session)
         response_obj["text"] += api_results[0]
         session_dict[user]["api_results"] = api_results[1]
+        print(session_dict[user]["api_results"])
 
         # Update user's top choice in session_dict and save to file
-        if len(session_dict[user]["api_results"]) > 1:
+        if len(session_dict[user]["api_results"]) > 2:
             response_obj["text"] = "To indicate your top choice restaurant, please type 'Top choice: ' followed by its number from the list. For example, if you want the first choice in the list, type 'Top choice: 1'."
+        else: 
+            session_dict[user]["top_choice"] = session_dict[user]["api_results"][1]
+            response_obj["attachments"] = [
+                {
+                    "title": "User Options",
+                    "text": "Would you like to add anyone to your reservation?",
+                    "actions": [
+                        {
+                            "type": "button",
+                            "text": "✅ Add friends",
+                            "msg": "yes_clicked",
+                            "msg_in_chat_window": True,
+                            "msg_processing_type": "sendMessage",
+                            "button_id": "yes_button"
+                        },
+                        {
+                            "type": "button",
+                            "text": "❌ No, thank you!",
+                            "msg": "no_clicked",
+                            "msg_in_chat_window": True,
+                            "msg_processing_type": "sendMessage"
+                        }
+                    ]
+                }
+            ]
 
     if "top choice" in message.lower():
         match = re.search(r"top choice[:*\s]*(\d+)", re.sub(r"[^\x00-\x7F]+", "", message.lower()))
         index = int(match.group(1)) if match else None
-        session_dict[user]["top_choice"] = session_dict[user]["api_results"][index]  # Store the top restaurant
+        top_choice = session_dict[user]["api_results"][index]
+        session_dict[user]["top_choice"] = top_choice  # Store the top restaurant
 
         save_sessions(session_dict)  # Persist changes
-        print("Got top choice from user:", session_dict[user]["top_choice"])
+        print("Got top choice from user:", top_choice)
 
+        response_obj["text"] = f"Great! Let's get started on booking you a table at {top_choice}."
         response_obj["attachments"] = [
             {
                 "title": "User Options",
