@@ -326,7 +326,7 @@ def RC_message(user_id, message):
         {
             "type": "button",
             "text": "✅ Yes, I'll be there!",
-            "msg": f"yes_response_{user_id}",
+            "msg": f"yes_response_{user_id} " + str(message),
             "msg_in_chat_window": True,
             "msg_processing_type": "sendMessage",
             "button_id": "yes_button"
@@ -365,40 +365,40 @@ def RC_message(user_id, message):
 
 
 
-# """Handle other user's button response"""
-def handle_friend_response(user, message, session_dict):    
-    user_id = message.split("_")[-1]  # Extract user ID
-    response_type = "accepted" if message.startswith("yes_response_") else "declined"
+# # """Handle other user's button response"""
+# def handle_friend_response(user, message, session_dict):    
+#     user_id = message.split("_")[-1]  # Extract user ID
+#     response_type = "accepted" if message.startswith("yes_response_") else "declined"
 
-    print(f"📩 User {user_id} has {response_type} the invitation.")
+#     print(f"📩 User {user_id} has {response_type} the invitation.")
 
-    response_obj = {
-        "text": ""
-    }
+#     response_obj = {
+#         "text": ""
+#     }
 
-    if response_type == "accepted":
-        response_obj["text"] = f"🎉 Great! {user_id} has accepted the invitation!" 
+#     if response_type == "accepted":
+#         response_obj["text"] = f"🎉 Great! {user_id} has accepted the invitation!" 
         
-        # Collecting info to create calendar invite
-        event_date = session_dict[user]["res_date"]
-        event_time = session_dict[user]["res_time"]
-        top_choice = session_dict[user]["top_choice"]
-        name_match = re.search(r'\*\*(.*?)\*\*', top_choice)
-        location_match = re.search(r'in (.*)', top_choice)
+#         # Collecting info to create calendar invite
+#         event_date = session_dict[user]["res_date"]
+#         event_time = session_dict[user]["res_time"]
+#         top_choice = session_dict[user]["top_choice"]
+#         name_match = re.search(r'\*\*(.*?)\*\*', top_choice)
+#         location_match = re.search(r'in (.*)', top_choice)
 
-        if name_match and location_match:
-            event_name = "Invite: " + name_match.group(1).strip()  # Extract restaurant name
-            location = location_match.group(1).strip()  # Extract address
+#         if name_match and location_match:
+#             event_name = "Invite: " + name_match.group(1).strip()  # Extract restaurant name
+#             location = location_match.group(1).strip()  # Extract address
 
-            # Generate calendar invite
-            # invite_filename = generate_calendar_invite(event_name, location, event_date, event_time)
+#             # Generate calendar invite
+#             # invite_filename = generate_calendar_invite(event_name, location, event_date, event_time)
 
-            response_obj["text"] += f"\nSending calendar invite with the following info: Date: {event_date}, Time: {event_time}, Name: {event_name}, Location: {location}"
-            # response_obj["text"] += f"\nHere's your calendar invite: [Click to download](http://yourserver.com/download/{invite_filename})"
-    else:
-        response_obj["text"] = f"😢 {user_id} has declined the invitation."
+#             response_obj["text"] += f"\nSending calendar invite with the following info: Date: {event_date}, Time: {event_time}, Name: {event_name}, Location: {location}"
+#             # response_obj["text"] += f"\nHere's your calendar invite: [Click to download](http://yourserver.com/download/{invite_filename})"
+#     else:
+#         response_obj["text"] = f"😢 {user_id} has declined the invitation."
 
-    return response_obj
+#     return response_obj
 
 
 # def generate_calendar_invite(event_name, location, event_date, event_time):
@@ -451,6 +451,35 @@ def extract_tool(text):
 
     return
 
+def handle_friend_response(user, message, session_dict):    
+    restaurant_match = re.search(r'at (.*?) \(', message)
+    date_match = re.search(r'on ([A-Za-z]+ \d{1,2}, \d{4})', message)
+    time_match = re.search(r'at (\d{1,2}) (AM|PM)', message)
+    
+    if not restaurant_match or not date_match or not time_match:
+        return {"text": "❌ Missing required details (date, time, or restaurant name). Please provide them in the correct format."}
+    
+    event_name = restaurant_match.group(1).strip()
+    event_date = date_match.group(1).strip()
+    event_time = f"{time_match.group(1)}:00 {time_match.group(2)}"
+    location = session_dict.get(user, {}).get("top_choice", "Unknown location")
+    
+    # Convert date format from 'March 3, 2025' to '20250303'
+    parsed_date = datetime.strptime(event_date, "%B %d, %Y").strftime("%Y%m%d")
+    event_start = datetime.strptime(f"{event_date} {event_time}", "%B %d, %Y %I:%M %p").strftime("%Y%m%dT%H%M00Z")
+    event_end = datetime.strptime(f"{event_date} {event_time}", "%B %d, %Y %I:%M %p")
+    event_end = event_end.replace(hour=event_end.hour + 1).strftime("%Y%m%dT%H%M00Z")
+    
+    calendar_url = (
+        "https://calendar.google.com/calendar/render?"
+        "action=TEMPLATE&"
+        f"text={urllib.parse.quote(event_name)}&"
+        f"dates={event_start}/{event_end}&"
+        f"details={urllib.parse.quote('Dinner reservation with friends')} &"
+        f"location={urllib.parse.quote(location)}"
+    )
+    
+    return {"text": calendar_url}
 
 
 ### --- FLASK ROUTE TO HANDLE USER REQUESTS --- ###
