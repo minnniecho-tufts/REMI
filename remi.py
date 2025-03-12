@@ -381,6 +381,8 @@ def handle_friend_response(user, message, session_dict):
         
         name_match = re.search(r'\*\*(.*?)\*\*', top_choice)
         location_match = re.search(r'in (.*)', top_choice)
+        print(name_match)
+        print(location_match)
 
         if name_match and location_match:
             event_name = name_match.group(1).strip()
