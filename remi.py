@@ -1,3 +1,4 @@
+
 from flask import send_file
 from datetime import datetime
 import os
@@ -368,45 +369,34 @@ def RC_message(user_id, message):
 
 # """Handle other user's button response"""
 def handle_friend_response(user, message, session_dict):    
-    user_id = message.split("_")[-1]  # Extract user ID
-    response_type = "accepted" if message.startswith("yes_response_") else "declined"
-    response_obj = {"text": ""}
-
-    if response_type == "accepted":
-        response_obj["text"] = f"🎉 Great! {user_id} has accepted the invitation!" 
+    print("friend responded")
+    user_id = message.split("_")[-1]
+    if message.startswith("yes_response_"):
+        event_date = session_dict.get(user, {}).get("res_date", "")
+        event_time = session_dict.get(user, {}).get("res_time", "")
+        top_choice = session_dict.get(user, {}).get("top_choice", "")
+        print("event date: " + str(event_date))
+        print("event time: " + str(event_time))
+        print("top choice" + str(top_choice))
         
-        event_date = session_dict[user]["res_date"]
-        event_time = session_dict[user]["res_time"]
-        top_choice = session_dict[user]["top_choice"]
+        if not event_date or not event_time or not top_choice:
+            return {"text": "❌ Missing event details. Cannot generate calendar invite."}
         
-        name_match = re.search(r'\*\*(.*?)\*\*', top_choice)
-        location_match = re.search(r'in (.*)', top_choice)
-        print(name_match)
-        print(location_match)
-        print(event_date)
-        print(event_time)
-
-        if name_match and location_match:
-            event_name = name_match.group(1).strip()
-            location = location_match.group(1).strip()
-
-            event_start = f"{event_date.replace('-', '')}T{event_time.replace(':', '')}00Z"
-            event_end = f"{event_date.replace('-', '')}T{str(int(event_time[:2]) + 1).zfill(2)}{event_time[2:]}00Z"
-
-            calendar_url = (
-                "https://calendar.google.com/calendar/render?"
-                "action=TEMPLATE&"
-                f"text={urllib.parse.quote(event_name)}&"
-                f"dates={event_start}/{event_end}&"
-                f"details={urllib.parse.quote('Dinner reservation with friends')} &"
-                f"location={urllib.parse.quote(location)}"
-            )
-
-            response_obj["text"] += f"\n📅 [Click here to add to Google Calendar]({calendar_url})"
+        event_name, location = top_choice.split(" in ") if " in " in top_choice else (top_choice, "Unknown location")
+        event_start = f"{event_date.replace('-', '')}T{event_time.replace(':', '')}00Z"
+        event_end = f"{event_date.replace('-', '')}T{str(int(event_time[:2]) + 1).zfill(2)}{event_time[2:]}00Z"
+        
+        calendar_url = (
+            "https://calendar.google.com/calendar/render?"
+            "action=TEMPLATE&"
+            f"text={urllib.parse.quote(event_name.strip())}&"
+            f"dates={event_start}/{event_end}&"
+            f"details={urllib.parse.quote('Dinner reservation with friends')}&"
+            f"location={urllib.parse.quote(location.strip())}"
+        )
+        return {"text": f"🎉 {user_id} has accepted the invitation! \n📅 [Click here to add to Google Calendar]({calendar_url})"}
     else:
-        response_obj["text"] = f"😢 {user_id} has declined the invitation."
-
-    return response_obj
+        return {"text": f"😢 {user_id} has declined the invitation."}
 
 # def generate_calendar_invite(event_name, location, event_date, event_time):
 #     """Creates a .ics file for the event and returns the filename."""
