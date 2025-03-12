@@ -455,6 +455,7 @@ def extract_tool(text):
     return
 
 def handle_friend_response(user, message, session_dict):    
+    print("in friend response")
     restaurant_match = re.search(r'at (.*?) \(', message)
     date_match = re.search(r'on ([A-Za-z]+ \d{1,2}, \d{4})', message)
     time_match = re.search(r'at (\d{1,2}) (AM|PM)', message)
@@ -530,6 +531,7 @@ def main():
 
     # **Check if the message is a button response from friend**
     if message.startswith("yes_response_") or message.startswith("no_response_"):
+        print("going to respond to friend")
         response = handle_friend_response(user, message, session_dict)
 
     # Get response from assistant
