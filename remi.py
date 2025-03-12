@@ -111,7 +111,7 @@ def RC_message(user_id, message):
 
 
 ### --- MAIN BOT FUNCTION --- ###
-@app.route("/query", methods=["POST"])
+@app.route("/", methods=["POST"])
 def main():
     """Handles user messages and manages session storage."""
     data = request.get_json()
