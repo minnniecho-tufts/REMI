@@ -114,14 +114,18 @@ def RC_message(user_id, message):
 @app.route('/', methods=['POST'])
 def main():
     """Handles incoming user queries and session management."""
+    
+    # Print the full request payload for debugging
     data = request.get_json()
+    print("🔍 Incoming request data:", data)  # Debug log
+    
     message = data.get("text", "").strip()
     user = data.get("user_name", "Unknown")
 
-    # Load sessions at the beginning of each request
+    # Load sessions
     session_dict = load_sessions()
 
-    # Initialize user session if it doesn't exist
+    # Initialize session if user is new
     if user not in session_dict:
         session_dict[user] = {
             "session_id": f"{user}-session",
@@ -131,18 +135,17 @@ def main():
             "res_date": "",
             "res_time": ""
         }
-        save_sessions(session_dict)  # Save immediately after creating new session
+        save_sessions(session_dict)
 
-    # Check if the message is a button response from a friend
+    # Handle different message types
     if message.startswith("yes_response_") or message.startswith("no_response_"):
         response = handle_friend_response(user, message, session_dict)
     else:
-        response = {"text": "⚠️ Unknown request format."}
+        response = {"text": f"⚠ Unknown request format: {message}"}
 
-    # Save session data at the end of the request
+    # Save session changes
     save_sessions(session_dict)
     return jsonify(response)
-
 ### --- RUN THE FLASK APP --- ###
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001)
