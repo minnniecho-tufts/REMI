@@ -369,27 +369,23 @@ def RC_message(user_id, message):
 
 # """Handle other user's button response"""
 def handle_friend_response(user, message, session_dict):
-    print(message)
     restaurant_match = re.search(r'at (.*?) \(', message)
     date_match = re.search(r'on ([A-Za-z]+ \d{1,2}, \d{4})', message)
-    time_match = re.search(r'at (\d{1,2} (AM|PM))', message)
-    print(restaurant_match)
-    print(date_match)
-    print(time_match)
-    
+    time_match = re.search(r'at (\d{1,2}) (AM|PM)', message)
     
     if not restaurant_match or not date_match or not time_match:
         return {"text": "❌ Missing required details (date, time, or restaurant name). Please provide them in the correct format."}
     
     event_name = restaurant_match.group(1).strip()
     event_date = date_match.group(1).strip()
-    event_time = time_match.group(1).strip()
+    event_time = f"{time_match.group(1)}:00 {time_match.group(2)}"
     location = session_dict.get(user, {}).get("top_choice", "Unknown location")
     
     # Convert date format from 'March 3, 2025' to '20250303'
     parsed_date = datetime.strptime(event_date, "%B %d, %Y").strftime("%Y%m%d")
-    event_start = f"{parsed_date}T{event_time[:2]}0000Z"
-    event_end = f"{parsed_date}T{str(int(event_time[:2]) + 1).zfill(2)}0000Z"
+    event_start = datetime.strptime(f"{event_date} {event_time}", "%B %d, %Y %I:%M %p").strftime("%Y%m%dT%H%M00Z")
+    event_end = datetime.strptime(f"{event_date} {event_time}", "%B %d, %Y %I:%M %p")
+    event_end = event_end.replace(hour=event_end.hour + 1).strftime("%Y%m%dT%H%M00Z")
     
     calendar_url = (
         "https://calendar.google.com/calendar/render?"
@@ -498,7 +494,11 @@ def main():
         save_sessions(session_dict)  # Save immediately after creating new session
 
     # **Check if the message is a button response from friend**
-    if message.startswith("yes_response_") or message.startswith("no_response_"):
+    if message.startswith("yes_response_"):
+        print("friend responded")
+        response = handle_friend_response(user, message, session_dict)
+
+    if message.startswith("no_response_"):
         print("friend responded")
         response = handle_friend_response(user, message, session_dict)
 
