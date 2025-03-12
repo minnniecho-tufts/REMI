@@ -458,7 +458,7 @@ def extract_tool(text):
 
 ### --- FLASK ROUTE TO HANDLE USER REQUESTS --- ###
 # """Handles user messages and manages session storage."""
-@app.route('/', methods=['POST'])
+@app.route('/query', methods=['POST'])
 def main():
     print("starting main exec")
     
@@ -501,6 +501,7 @@ def main():
 
     # **Check if the message is a button response from friend**
     if message.startswith("yes_response_") or message.startswith("no_response_"):
+        print("friend responded")
         response = handle_friend_response(user, message, session_dict)
 
     # Get response from assistant
