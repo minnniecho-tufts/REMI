@@ -30,14 +30,13 @@ def save_sessions(session_dict):
     with open(SESSION_FILE, "w") as file:
         json.dump(session_dict, file, indent=4)
 
-### --- LOG UNEXPECTED REQUESTS --- ###
+### --- FIX `POST /` REQUESTS: HANDLE THEM AS `/query` --- ###
 @app.route('/', methods=['POST'])
 def handle_root_post():
-    """Logs unexpected POST requests and redirects them to /query."""
+    """Automatically forwards misplaced POST requests to /query."""
     data = request.get_json()
-    print(f"⚠️ Unexpected POST / request received: {data}")
-
-    return jsonify({"error": "Invalid endpoint. Use /query instead.", "received": data}), 400
+    print(f"🔄 Redirecting misplaced request to /query: {data}")
+    return process_request(data)
 
 @app.route('/', methods=['GET'])
 def health_check():
@@ -48,11 +47,12 @@ def health_check():
 @app.route('/query', methods=['POST'])
 def main():
     """Handles user messages and session management dynamically."""
-    
-    # Print the full request payload for debugging
     data = request.get_json()
-    print("🔍 Incoming request data:", data)  
+    return process_request(data)
 
+def process_request(data):
+    """Handles user queries, whether they come from `/` or `/query`."""
+    
     if not data or "text" not in data:
         print("⚠️ Received malformed request:", data)
         return jsonify({"error": "Malformed request"}), 400
@@ -136,6 +136,7 @@ def restaurant_assistant_llm(message, user, session_dict):
 ### --- RUN THE FLASK APP --- ###
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001)
+
 
 
 
