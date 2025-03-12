@@ -455,7 +455,7 @@ def extract_tool(text):
 
 ### --- FLASK ROUTE TO HANDLE USER REQUESTS --- ###
 # """Handles user messages and manages session storage."""
-@app.route('/query', methods=['POST'])
+@app.route('/', methods=['POST'])
 def main():
     print("starting main exec")
     
