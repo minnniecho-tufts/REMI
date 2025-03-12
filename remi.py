@@ -369,24 +369,22 @@ def RC_message(user_id, message):
 
 # """Handle other user's button response"""
 def handle_friend_response(message, session_dict, user):    
-    date_match = re.search(r'Reservation date:\s*(\d{2}/\d{2}/\d{4})', message)
-    time_match = re.search(r'Reservation time:\s*(\d{1,2}:\d{2}\s?(AM|PM))', message, re.IGNORECASE)
-    restaurant_match = re.search(r'Restaurant:\s*\*\*(.*?)\*\*', message)
-
-    print(date_match)
-    print(time_match)
-    print(restaurant_match)
+    restaurant_match = re.search(r'at (.*?) \(', message)
+    date_match = re.search(r'on ([A-Za-z]+ \d{1,2}, \d{4})', message)
+    time_match = re.search(r'at (\d{1,2} (AM|PM))', message)
     
-    if not date_match or not time_match or not restaurant_match:
+    if not restaurant_match or not date_match or not time_match:
         return {"text": "❌ Missing required details (date, time, or restaurant name). Please provide them in the correct format."}
     
-    event_date = date_match.group(1)
-    event_time = time_match.group(1)
     event_name = restaurant_match.group(1).strip()
+    event_date = date_match.group(1).strip()
+    event_time = time_match.group(1).strip()
     location = session_dict.get(user, {}).get("top_choice", "Unknown location")
     
-    event_start = f"{event_date[6:]}{event_date[:2]}{event_date[3:5]}T{event_time[:2]}{event_time[3:5]}00Z"
-    event_end = f"{event_date[6:]}{event_date[:2]}{event_date[3:5]}T{str(int(event_time[:2]) + 1).zfill(2)}{event_time[3:5]}00Z"
+    # Convert date format from 'March 3, 2025' to '20250303'
+    parsed_date = datetime.strptime(event_date, "%B %d, %Y").strftime("%Y%m%d")
+    event_start = f"{parsed_date}T{event_time[:2]}0000Z"
+    event_end = f"{parsed_date}T{str(int(event_time[:2]) + 1).zfill(2)}0000Z"
     
     calendar_url = (
         "https://calendar.google.com/calendar/render?"
