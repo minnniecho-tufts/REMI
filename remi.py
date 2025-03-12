@@ -372,6 +372,10 @@ def handle_friend_response(message, session_dict, user):
     restaurant_match = re.search(r'at (.*?) \(', message)
     date_match = re.search(r'on ([A-Za-z]+ \d{1,2}, \d{4})', message)
     time_match = re.search(r'at (\d{1,2} (AM|PM))', message)
+    print(restaurant_match)
+    print(date_match)
+    print(time_match)
+    
     
     if not restaurant_match or not date_match or not time_match:
         return {"text": "❌ Missing required details (date, time, or restaurant name). Please provide them in the correct format."}
