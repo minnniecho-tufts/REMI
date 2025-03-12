@@ -99,9 +99,9 @@ def restaurant_assistant_llm(message, user, session_dict):
             - When the user provides a **reservation date and time , in a format similar to this 03/05/2025**, remember these details and respond with the following in a bulleted list format:
                 "Reservation time: [time]\nReservation date: [date]\n
             - If the user tags a friend using '@' (e.g., "@john_doe"), generate a friendly **personalized invitation message** with specifically the format below including:
-                - Restaurant: The **name of the restaurant** from {session_dict[user]["top_choice"]}
-                - Date: The **reservation date**
-                - Time: The **reservation time**
+                - The **name of the restaurant** from {session_dict[user]["top_choice"]}
+                - The **reservation date**
+                - The **reservation time**
                 - Request for the friend to confirm if they will attend
             - Ask the user to confirm if they'd like to send the message. If they affirm, respond with
             "RC_message(user_id, message)" with the parameters filled in appropriately.
