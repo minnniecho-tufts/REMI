@@ -368,7 +368,8 @@ def RC_message(user_id, message):
 
 
 # """Handle other user's button response"""
-def handle_friend_response(message, session_dict, user):    
+def handle_friend_response(user, message, session_dict):
+    print(message)
     restaurant_match = re.search(r'at (.*?) \(', message)
     date_match = re.search(r'on ([A-Za-z]+ \d{1,2}, \d{4})', message)
     time_match = re.search(r'at (\d{1,2} (AM|PM))', message)
