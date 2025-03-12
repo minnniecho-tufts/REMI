@@ -1,4 +1,3 @@
-
 from flask import send_file
 from datetime import datetime
 import os
@@ -7,7 +6,6 @@ import requests
 from flask import Flask, request, jsonify, Response
 from llmproxy import generate
 import re
-import urllib.parse
 
 app = Flask(__name__)
 
@@ -99,7 +97,7 @@ def restaurant_assistant_llm(message, user, session_dict):
             - When the user provides a **reservation date and time**, remember these details and respond with the following in a bulleted list format:
                 "Reservation time: [time]\nReservation date: [date]\n
             - If the user tags a friend using '@' (e.g., "@john_doe"), generate a friendly **personalized invitation message** including:
-                - The **top choice restaurant**
+                - The **name of the restaurant** from {session_dict[user]["top_choice"]}
                 - The **reservation date**
                 - The **reservation time**
                 - Request for the friend to confirm if they will attend
@@ -328,7 +326,7 @@ def RC_message(user_id, message):
         {
             "type": "button",
             "text": "✅ Yes, I'll be there!",
-            "msg": f"yes_response_{user_id} " + str(message),
+            "msg": f"yes_response_{user_id}",
             "msg_in_chat_window": True,
             "msg_processing_type": "sendMessage",
             "button_id": "yes_button"
@@ -368,35 +366,40 @@ def RC_message(user_id, message):
 
 
 # """Handle other user's button response"""
-def handle_friend_response(user, message, session_dict):
-    restaurant_match = re.search(r'at (.*?) \(', message)
-    date_match = re.search(r'on ([A-Za-z]+ \d{1,2}, \d{4})', message)
-    time_match = re.search(r'at (\d{1,2}) (AM|PM)', message)
-    
-    if not restaurant_match or not date_match or not time_match:
-        return {"text": "❌ Missing required details (date, time, or restaurant name). Please provide them in the correct format."}
-    
-    event_name = restaurant_match.group(1).strip()
-    event_date = date_match.group(1).strip()
-    event_time = f"{time_match.group(1)}:00 {time_match.group(2)}"
-    location = session_dict.get(user, {}).get("top_choice", "Unknown location")
-    
-    # Convert date format from 'March 3, 2025' to '20250303'
-    parsed_date = datetime.strptime(event_date, "%B %d, %Y").strftime("%Y%m%d")
-    event_start = datetime.strptime(f"{event_date} {event_time}", "%B %d, %Y %I:%M %p").strftime("%Y%m%dT%H%M00Z")
-    event_end = datetime.strptime(f"{event_date} {event_time}", "%B %d, %Y %I:%M %p")
-    event_end = event_end.replace(hour=event_end.hour + 1).strftime("%Y%m%dT%H%M00Z")
-    
-    calendar_url = (
-        "https://calendar.google.com/calendar/render?"
-        "action=TEMPLATE&"
-        f"text={urllib.parse.quote(event_name)}&"
-        f"dates={event_start}/{event_end}&"
-        f"details={urllib.parse.quote('Dinner reservation with friends')} &"
-        f"location={urllib.parse.quote(location)}"
-    )
-    
-    return {"text": calendar_url}
+def handle_friend_response(user, message, session_dict):    
+    user_id = message.split("_")[-1]  # Extract user ID
+    response_type = "accepted" if message.startswith("yes_response_") else "declined"
+
+    print(f"📩 User {user_id} has {response_type} the invitation.")
+
+    response_obj = {
+        "text": ""
+    }
+
+    if response_type == "accepted":
+        response_obj["text"] = f"🎉 Great! {user_id} has accepted the invitation!" 
+        
+        # Collecting info to create calendar invite
+        event_date = session_dict[user]["res_date"]
+        event_time = session_dict[user]["res_time"]
+        top_choice = session_dict[user]["top_choice"]
+        name_match = re.search(r'\*\*(.*?)\*\*', top_choice)
+        location_match = re.search(r'in (.*)', top_choice)
+
+        if name_match and location_match:
+            event_name = "Invite: " + name_match.group(1).strip()  # Extract restaurant name
+            location = location_match.group(1).strip()  # Extract address
+
+            # Generate calendar invite
+            # invite_filename = generate_calendar_invite(event_name, location, event_date, event_time)
+
+            response_obj["text"] += f"\nSending calendar invite with the following info: Date: {event_date}, Time: {event_time}, Name: {event_name}, Location: {location}"
+            # response_obj["text"] += f"\nHere's your calendar invite: [Click to download](http://yourserver.com/download/{invite_filename})"
+    else:
+        response_obj["text"] = f"😢 {user_id} has declined the invitation."
+
+    return response_obj
+
 
 # def generate_calendar_invite(event_name, location, event_date, event_time):
 #     """Creates a .ics file for the event and returns the filename."""
@@ -494,12 +497,7 @@ def main():
         save_sessions(session_dict)  # Save immediately after creating new session
 
     # **Check if the message is a button response from friend**
-    if message.startswith("yes_response_"):
-        print("friend responded")
-        response = handle_friend_response(user, message, session_dict)
-
-    if message.startswith("no_response_"):
-        print("friend responded")
+    if message.startswith("yes_response_") or message.startswith("no_response_"):
         response = handle_friend_response(user, message, session_dict)
 
     # Get response from assistant
@@ -514,12 +512,3 @@ def main():
 ### --- RUN THE FLASK APP --- ###
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001)
-
-
-
-
-
-
-
-
-
