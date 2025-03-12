@@ -95,7 +95,7 @@ def restaurant_assistant_llm(message, user, session_dict):
                 "Cuisine noted: [cuisine]\nLocation noted: [location]\nBudget noted: [budget (1-4)]\nSearch radius noted: [radius (in meters)]"
             and then say, "Thank you! Now searching..."
             
-            - When the user provides a **reservation date and time**, remember these details and respond with the following in a bulleted list format:
+            - When the user provides a **reservation date and time , in a format similar to this 03/05/2025**, remember these details and respond with the following in a bulleted list format:
                 "Reservation time: [time]\nReservation date: [date]\n
             - If the user tags a friend using '@' (e.g., "@john_doe"), generate a friendly **personalized invitation message** including:
                 - The **name of the restaurant** from {session_dict[user]["top_choice"]}
@@ -383,6 +383,8 @@ def handle_friend_response(user, message, session_dict):
         location_match = re.search(r'in (.*)', top_choice)
         print(name_match)
         print(location_match)
+        print(event_date)
+        print(event_time)
 
         if name_match and location_match:
             event_name = name_match.group(1).strip()
