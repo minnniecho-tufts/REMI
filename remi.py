@@ -98,10 +98,10 @@ def restaurant_assistant_llm(message, user, session_dict):
             
             - When the user provides a **reservation date and time , in a format similar to this 03/05/2025**, remember these details and respond with the following in a bulleted list format:
                 "Reservation time: [time]\nReservation date: [date]\n
-            - If the user tags a friend using '@' (e.g., "@john_doe"), generate a friendly **personalized invitation message** including:
-                - The **name of the restaurant** from {session_dict[user]["top_choice"]}
-                - The **reservation date**
-                - The **reservation time**
+            - If the user tags a friend using '@' (e.g., "@john_doe"), generate a friendly **personalized invitation message** with specifically the format below including:
+                - Restaurant: The **name of the restaurant** from {session_dict[user]["top_choice"]}
+                - Date: The **reservation date**
+                - Time: The **reservation time**
                 - Request for the friend to confirm if they will attend
             - Ask the user to confirm if they'd like to send the message. If they affirm, respond with
             "RC_message(user_id, message)" with the parameters filled in appropriately.
@@ -328,7 +328,7 @@ def RC_message(user_id, message):
         {
             "type": "button",
             "text": "✅ Yes, I'll be there!",
-            "msg": f"yes_response_{user_id}",
+            "msg": f"yes_response_{user_id} " + str(message),
             "msg_in_chat_window": True,
             "msg_processing_type": "sendMessage",
             "button_id": "yes_button"
@@ -368,35 +368,36 @@ def RC_message(user_id, message):
 
 
 # """Handle other user's button response"""
-def handle_friend_response(user, message, session_dict):    
-    print("friend responded")
-    user_id = message.split("_")[-1]
-    if message.startswith("yes_response_"):
-        event_date = session_dict.get(user, {}).get("res_date", "")
-        event_time = session_dict.get(user, {}).get("res_time", "")
-        top_choice = session_dict.get(user, {}).get("top_choice", "")
-        print("event date: " + str(event_date))
-        print("event time: " + str(event_time))
-        print("top choice" + str(top_choice))
-        
-        if not event_date or not event_time or not top_choice:
-            return {"text": "❌ Missing event details. Cannot generate calendar invite."}
-        
-        event_name, location = top_choice.split(" in ") if " in " in top_choice else (top_choice, "Unknown location")
-        event_start = f"{event_date.replace('-', '')}T{event_time.replace(':', '')}00Z"
-        event_end = f"{event_date.replace('-', '')}T{str(int(event_time[:2]) + 1).zfill(2)}{event_time[2:]}00Z"
-        
-        calendar_url = (
-            "https://calendar.google.com/calendar/render?"
-            "action=TEMPLATE&"
-            f"text={urllib.parse.quote(event_name.strip())}&"
-            f"dates={event_start}/{event_end}&"
-            f"details={urllib.parse.quote('Dinner reservation with friends')}&"
-            f"location={urllib.parse.quote(location.strip())}"
-        )
-        return {"text": f"🎉 {user_id} has accepted the invitation! \n📅 [Click here to add to Google Calendar]({calendar_url})"}
-    else:
-        return {"text": f"😢 {user_id} has declined the invitation."}
+def handle_friend_response(message, session_dict, user):    
+    date_match = re.search(r'Reservation date:\s*(\d{2}/\d{2}/\d{4})', message)
+    time_match = re.search(r'Reservation time:\s*(\d{1,2}:\d{2}\s?(AM|PM))', message, re.IGNORECASE)
+    restaurant_match = re.search(r'Restaurant:\s*\*\*(.*?)\*\*', message)
+
+    print(date_match)
+    print(time_match)
+    print(restaurant_match)
+    
+    if not date_match or not time_match or not restaurant_match:
+        return {"text": "❌ Missing required details (date, time, or restaurant name). Please provide them in the correct format."}
+    
+    event_date = date_match.group(1)
+    event_time = time_match.group(1)
+    event_name = restaurant_match.group(1).strip()
+    location = session_dict.get(user, {}).get("top_choice", "Unknown location")
+    
+    event_start = f"{event_date[6:]}{event_date[:2]}{event_date[3:5]}T{event_time[:2]}{event_time[3:5]}00Z"
+    event_end = f"{event_date[6:]}{event_date[:2]}{event_date[3:5]}T{str(int(event_time[:2]) + 1).zfill(2)}{event_time[3:5]}00Z"
+    
+    calendar_url = (
+        "https://calendar.google.com/calendar/render?"
+        "action=TEMPLATE&"
+        f"text={urllib.parse.quote(event_name)}&"
+        f"dates={event_start}/{event_end}&"
+        f"details={urllib.parse.quote('Dinner reservation with friends')} &"
+        f"location={urllib.parse.quote(location)}"
+    )
+    
+    return {"text": calendar_url}
 
 # def generate_calendar_invite(event_name, location, event_date, event_time):
 #     """Creates a .ics file for the event and returns the filename."""
