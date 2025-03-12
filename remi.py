@@ -111,7 +111,7 @@ def RC_message(user_id, message):
     return response.json()
 
 ### --- FLASK ROUTE TO HANDLE USER REQUESTS --- ###
-@app.route('/query', methods=['POST'])
+@app.route('/', methods=['POST'])
 def main():
     """Handles incoming user queries and session management."""
     data = request.get_json()
