@@ -1,14 +1,25 @@
-import re
+from flask import Flask, request, jsonify, send_file
+from datetime import datetime
 import os
 import json
-import urllib.parse
 import requests
-from flask import Flask, request, jsonify
+import re
+import urllib.parse
+from llmproxy import generate
 
 app = Flask(__name__)
 
 # Load API Key from .env file
+API_KEY = os.getenv("YELP_API_KEY")   
+YELP_API_URL = "https://api.yelp.com/v3/businesses/search"
+
+# JSON file to store user sessions
 SESSION_FILE = "session_store.json"
+
+# Rocket.Chat API Credentials
+ROCKETCHAT_API_URL = "https://chat.genaiconnect.net/api/v1/chat.postMessage"
+ROCKETCHAT_AUTH_TOKEN = "NwEWNpYAyj0VjnGIWDqzLG_8JGUN4l2J3-4mQaZm_pF"
+ROCKETCHAT_USER_ID = "vuWQsF6j36wS6qxmf"
 
 ### --- SESSION MANAGEMENT FUNCTIONS --- ###
 def load_sessions():
@@ -28,19 +39,19 @@ def save_sessions(session_dict):
 
 ### --- GOOGLE CALENDAR LINK GENERATION --- ###
 def generate_google_calendar_link(event_name, location, event_date, event_time):
-    """Generates a Google Calendar event link."""
+    """
+    Generates a Google Calendar event link.
+    """
     base_url = "https://calendar.google.com/calendar/render?action=TEMPLATE"
-
-    # Convert time to Google Calendar format (YYYYMMDDTHHMMSSZ)
-    formatted_date = event_date.replace("-", "")  # Remove dashes
-    formatted_time = event_time.replace(":", "") + "00Z"  # Convert HH:MM to HHMMSSZ
-    event_datetime = f"{formatted_date}T{formatted_time}"  # Final format
+    formatted_date = event_date.replace("-", "")  
+    formatted_time = event_time.replace(":", "") + "00Z"  
+    event_datetime = f"{formatted_date}T{formatted_time}"  
 
     params = {
-        "text": event_name,
+        "text": event_name,  
         "dates": f"{event_datetime}/{event_datetime}",  
-        "details": f"Join me at {event_name} at {location}.",
-        "location": location,
+        "details": f"Join me at {event_name} at {location}.",  
+        "location": location,  
         "sf": "true",
         "output": "xml"
     }
@@ -53,21 +64,17 @@ def handle_friend_response(user, message, session_dict):
     user_id = message.split("_")[-1]  
     response_type = "accepted" if message.startswith("yes_response_") else "declined"
 
-    print(f"📩 User {user_id} has {response_type} the invitation.")
-
     if response_type == "accepted":
-        # Retrieve event details
         event_date = session_dict[user]["res_date"]
         event_time = session_dict[user]["res_time"]
         top_choice = session_dict[user]["top_choice"]
 
-        # Extract restaurant name and location
         name_match = re.search(r'\*\*(.*?)\*\*', top_choice)
         location_match = re.search(r'in (.*)', top_choice)
 
         if name_match and location_match:
-            event_name = name_match.group(1).strip()
-            location = location_match.group(1).strip()
+            event_name = name_match.group(1).strip()  
+            location = location_match.group(1).strip()  
 
             # Generate Google Calendar event link
             calendar_link = generate_google_calendar_link(event_name, location, event_date, event_time)
@@ -78,12 +85,10 @@ def handle_friend_response(user, message, session_dict):
 ### --- SENDING MESSAGE TO ROCKET.CHAT --- ###
 def RC_message(user_id, message):
     """Sends a message to a user on Rocket.Chat."""
-    url = "https://chat.genaiconnect.net/api/v1/chat.postMessage"
-
     headers = {
         "Content-Type": "application/json",
-        "X-Auth-Token": "NwEWNpYAyj0VjnGIWDqzLG_8JGUN4l2J3-4mQaZm_pF",
-        "X-User-Id": "vuWQsF6j36wS6qxmf"
+        "X-Auth-Token": ROCKETCHAT_AUTH_TOKEN,
+        "X-User-Id": ROCKETCHAT_USER_ID
     }
 
     payload = {
@@ -91,15 +96,14 @@ def RC_message(user_id, message):
         "text": message
     }
 
-    response = requests.post(url, json=payload, headers=headers)
+    response = requests.post(ROCKETCHAT_API_URL, json=payload, headers=headers)
     print(response.status_code, response.json())
 
 ### --- FLASK ROUTE TO HANDLE USER REQUESTS --- ###
-@app.route('/', methods=['POST'])
+@app.route('/query', methods=['POST'])
 def main():
     """Handles incoming user queries and session management dynamically."""
     
-    # Print the full request payload for debugging
     data = request.get_json()
     print("🔍 Incoming request data:", data)  
 
@@ -109,10 +113,9 @@ def main():
     # Load sessions
     session_dict = load_sessions()
 
-    # Restart phrases dynamically
+    # Restart session when user says "hi" or "restart"
     restart_phrases = ["hi", "hello", "restart", "start over", "new session", "begin again", "reset"]
 
-    # Restart session automatically if a user greets or requests restart
     if any(re.search(rf"\b{phrase}\b", message) for phrase in restart_phrases):
         session_dict[user] = {
             "session_id": f"{user}-session",
@@ -126,22 +129,43 @@ def main():
 
         # Send restart message directly to Rocket.Chat
         RC_message(user, "🔄 Your session has been restarted! Let's start fresh. How can I help you today?")
-        return jsonify({})  # No message returned to the client
+        return jsonify({})  
 
     # Handle invitation responses dynamically
     elif re.search(r"yes_response_|no_response_", message):
         handle_friend_response(user, message, session_dict)
 
-    # If message is unrecognized
+    # Process restaurant assistant LLM
     else:
-        RC_message(user, f"⚠ Unknown request format: {message}")
+        response = restaurant_assistant_llm(message, user, session_dict)
+        RC_message(user, response["text"])
 
-    # Save session changes
     save_sessions(session_dict)
     return jsonify({})
+
+### --- LLM CHATBOT HANDLER --- ###
+def restaurant_assistant_llm(message, user, session_dict):
+    """Handles the chatbot logic and restaurant recommendations."""
+    sid = session_dict[user]["session_id"]
     
+    response = generate(
+        model="4o-mini",
+        system="...",
+        query=message,
+        temperature=0.7,
+        lastk=10,
+        session_id=sid,
+        rag_usage=False
+    )
+    
+    response_text = response.get("response", "⚠️ Sorry, I couldn't process that. Could you rephrase?").strip() if isinstance(response, dict) else response.strip()
+
+    response_obj = {"text": response_text}
+    return response_obj
+
 ### --- RUN THE FLASK APP --- ###
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001)
+
 
 
